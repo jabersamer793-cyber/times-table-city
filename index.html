@@ -71,7 +71,13 @@ img{max-width:100%}
 .fields{display:grid;gap:14px;grid-template-columns:1fr 1fr}
 .lab{display:grid;gap:6px;font-weight:800;min-width:0}
 .lab input{font:inherit;font-weight:700;border:3px solid var(--ink);border-radius:12px;padding:9px 12px;background:#fff;color:var(--ink);width:100%;min-width:0}
-.lab.p0 span{color:var(--p0)} .lab.p1 span{color:var(--p1)}
+.plr{display:grid;gap:8px;align-content:start;min-width:0}
+.swatches{display:flex;flex-wrap:wrap;gap:6px}
+.sw{width:46px;height:34px;padding:2px;border:3px solid transparent;border-radius:12px;background:#fff;display:grid;place-items:center;box-shadow:0 2px 0 rgba(22,41,107,.25)}
+.sw svg{width:100%;height:auto;display:block}
+.sw.on{border-color:var(--ink);background:#FFF3B0;box-shadow:0 3px 0 var(--ink);transform:translateY(-2px)}
+.sw[disabled]{opacity:.3;cursor:not-allowed}
+.lab .dot{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid var(--ink);vertical-align:middle;margin-inline-end:6px}
 .levels{display:grid;gap:12px;grid-template-columns:1fr 1fr}
 .lvl{background:#fff;border:3px solid var(--ink);border-radius:16px;padding:12px 14px;text-align:start;display:grid;gap:2px;box-shadow:0 4px 0 var(--ink)}
 .lvl b{font-family:var(--f-display);font-size:1.15rem}
@@ -280,8 +286,10 @@ img{max-width:100%}
       <div class="panel">
         <h2 class="h2" id="whoH">من سيلعب؟</h2>
         <div class="fields">
-          <label class="lab p0"><span id="n0lab">اللاعب الأول (السيارة الزرقاء)</span><input id="n0" maxlength="14" value="اللاعب الأول" autocomplete="off"></label>
-          <label class="lab p1" id="n1box"><span>اللاعب الثاني (السيارة الخضراء)</span><input id="n1" maxlength="14" value="اللاعب الثاني" autocomplete="off"></label>
+          <div class="plr"><label class="lab"><span id="n0lab">اللاعب الأول</span><input id="n0" maxlength="14" value="اللاعب الأول" autocomplete="off"></label>
+            <div class="swatches" id="sw0" role="group" aria-label="اختر لون السيارة"></div></div>
+          <div class="plr" id="n1box"><label class="lab"><span id="n1lab">اللاعب الثاني</span><input id="n1" maxlength="14" value="اللاعب الثاني" autocomplete="off"></label>
+            <div class="swatches" id="sw1" role="group" aria-label="اختر لون السيارة"></div></div>
         </div>
       </div>
       <div class="panel">
@@ -401,9 +409,22 @@ const ICON={
 const STAR_PATH='M12 2.4l2.95 6.35 6.95.8-5.15 4.75 1.4 6.85L12 17.7l-6.15 3.45 1.4-6.85L2.1 9.55l6.95-.8z';
 const star=(on,sz)=>`<svg viewBox="0 0 24 24" ${sz?`width="${sz}" height="${sz}"`:''} aria-hidden="true"><path d="${STAR_PATH}" fill="${on?'#FFC52E':'#E6E9F5'}" stroke="#16296B" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
 const stars=(n,tot)=>Array.from({length:tot||n},(_,i)=>star(i<n)).join('');
-const PC=['#2F7BEA','#2BA84A'];
-const PCD=['#1B56B5','#1C7A33'];
-const CARNAME=['السيارة الزرقاء','السيارة الخضراء'];
+/* car colours: each player picks one on the home screen */
+const CARS=[{n:'الزرقاء',c:'#2F7BEA',d:'#1B56B5'},{n:'الخضراء',c:'#2BA84A',d:'#1C7A33'},{n:'الحمراء',c:'#E5483B',d:'#A82A20'},
+  {n:'البنفسجية',c:'#8A55E0',d:'#5E33A8'},{n:'البرتقالية',c:'#F28A1F',d:'#B85E0A'},{n:'الصفراء',c:'#F5C518',d:'#B88F00'},
+  {n:'الوردية',c:'#EC5FA8',d:'#B33276'},{n:'الفيروزية',c:'#1FA8A0',d:'#127A74'},{n:'السوداء',c:'#3A3F55',d:'#1E2233'}];
+let PC=[],PCD=[],CARNAME=[];
+const okCar=i=>Number.isInteger(i)&&i>=0&&i<CARS.length;
+function applyColors(a){
+  a=[okCar(a[0])?a[0]:0,okCar(a[1])?a[1]:1];
+  if(a[1]===a[0])a[1]=CARS.findIndex((_,i)=>i!==a[0]);
+  PC=a.map(i=>CARS[i].c);PCD=a.map(i=>CARS[i].d);CARNAME=a.map(i=>'السيارة '+CARS[i].n);
+  const r=document.documentElement.style;r.setProperty('--p0',PC[0]);r.setProperty('--p1',PC[1]);
+  return a;
+}
+let CHOICE=[0,1];
+try{const c=JSON.parse(localStorage.getItem('mtc-cars')||'null');if(Array.isArray(c))CHOICE=applyColors(c);}catch(e){}
+applyColors(CHOICE);
 
 /* ---------- sound ---------- */
 const S={players:[],turn:0,adv:false,decks:{},mdeck:[],endAfter:null,busy:false,sound:true,over:false,names:['اللاعب الأول','اللاعب الثاني']};
@@ -850,7 +871,7 @@ const dbP=(window.claude&&typeof window.claude.use==='function')?Promise.resolve
 const mine=()=>!OL.on||S.turn===OL.seat;
 function stateBody(ev){
   return{v:1,status:S.over?'over':'play',round:OL.round,rev:OL.rev,adv:S.adv,turn:S.turn,endAfter:S.endAfter,
-    players:S.players.map(p=>({name:p.name,id:p.id||'',pos:p.pos,stars:p.stars,total:p.total,keys:p.keys.slice()})),ev:ev||null,at:Date.now()};
+    players:S.players.map(p=>({name:p.name,id:p.id||'',car:p.car,pos:p.pos,stars:p.stars,total:p.total,keys:p.keys.slice()})),ev:ev||null,at:Date.now()};
 }
 function sync(ev){
   if(!OL.on||!OL.ref)return;
@@ -948,7 +969,7 @@ async function hostP2P(){
   olMsg('');P2P.isHost=true;P2P.code=code;
   OL.on=true;OL.code=code;OL.seat=0;OL.ref=p2pRef();OL.rev=1;OL.round=1;OL.waiting=true;
   await OL.ref.set({v:1,status:'wait',round:1,rev:1,adv:S.adv,turn:0,endAfter:null,
-    players:[{name:myName(),id:MYID,pos:1,stars:0,total:0,keys:[]},null],ev:null,at:Date.now()});
+    players:[{name:myName(),id:MYID,car:CHOICE[0],pos:1,stars:0,total:0,keys:[]},null],ev:null,at:Date.now()});
   saveSession();subscribe();
   $('#lobbyCode').textContent=code;showInvite(code);$('#lobbyOv').hidden=false;
 }
@@ -1028,7 +1049,7 @@ async function applyRemote(d){
   if(d.ev&&d.ev.t){showFeed(d.ev.t,d.ev.k);if(d.ev.k==='ok')sfx.ok();else if(d.ev.k==='bad')sfx.bad();else if(d.ev.k==='key')sfx.key();}
   for(let i=0;i<2;i++){
     const p=S.players[i],r=d.players[i];if(!p||!r)continue;
-    p.name=r.name;p.id=r.id;p.keys=r.keys.slice();p.stars=r.stars;p.total=r.total;
+    p.name=r.name;p.id=r.id;p.keys=r.keys.slice();p.stars=r.stars;p.total=r.total;if(okCar(r.car))p.car=r.car;
     if(r.pos>p.pos){renderNodes();renderPlayers();await movePawn(p,r.pos);}else p.pos=r.pos;
   }
   S.turn=d.turn;S.endAfter=d.endAfter;S.adv=!!d.adv;
@@ -1038,7 +1059,8 @@ async function applyRemote(d){
 }
 function enterOnline(d){
   S.adv=!!d.adv;S.names=d.players.map(p=>p?p.name:'');
-  S.players=d.players.map((r,i)=>({idx:i,name:r.name,id:r.id,pos:r.pos,stars:r.stars,total:r.total,keys:r.keys.slice(),hd:null}));
+  const cars=applyColors([d.players[0].car,d.players[1]&&d.players[1].car]);
+  S.players=d.players.map((r,i)=>({idx:i,name:r.name,id:r.id,car:cars[i],pos:r.pos,stars:r.stars,total:r.total,keys:r.keys.slice(),hd:null}));
   S.turn=d.turn;S.endAfter=d.endAfter;S.over=false;S.busy=false;S.decks={};S.mdeck=[];
   $('#endOv').hidden=true;$('#annOv').hidden=true;$('#setup').hidden=true;$('#game').hidden=false;window.scrollTo(0,0);
   $('#olBadge').hidden=false;$('#olBadge').textContent='رمز اللعبة: '+OL.code;
@@ -1059,7 +1081,7 @@ async function hostGame(){
     leaveOnline();
     OL.on=true;OL.code=code;OL.seat=0;OL.ref=db.doc('games/'+code);OL.rev=1;OL.round=1;OL.waiting=true;
     await OL.ref.set({v:1,status:'wait',round:1,rev:1,adv:S.adv,turn:0,endAfter:null,
-      players:[{name:myName(),id:MYID,pos:1,stars:0,total:0,keys:[]},null],ev:null,at:Date.now()});
+      players:[{name:myName(),id:MYID,car:CHOICE[0],pos:1,stars:0,total:0,keys:[]},null],ev:null,at:Date.now()});
     saveSession();subscribe();
     $('#lobbyCode').textContent=code;hideInvite();$('#lobbyOv').hidden=false;
   }catch(e){leaveOnline();olMsg('تعذّر إنشاء اللعبة. تأكد أن لديك صلاحية التعديل على هذه اللعبة ثم حاول مرة أخرى.');}
@@ -1088,7 +1110,9 @@ async function joinGame(code,resume){
     OL.on=true;OL.code=code;OL.ref=ref;OL.round=d.round||1;
     if(seat===-1){
       seat=1;let nm=myName();if(nm===d.players[0].name)nm+=' 2';
-      d.players[1]={name:nm,id:MYID,pos:1,stars:0,total:0,keys:[]};
+      // my colour, unless the host already drives it
+      let car=CHOICE[0];if(car===d.players[0].car)car=CHOICE[1]!==car?CHOICE[1]:CARS.findIndex((_,i)=>i!==car);
+      d.players[1]={name:nm,id:MYID,car,pos:1,stars:0,total:0,keys:[]};
       d.status='play';d.rev=(d.rev||1)+1;d.at=Date.now();d.ev={t:`انضم ${nm} إلى اللعبة`,k:'info'};
       await ref.set(d);
     }
@@ -1171,13 +1195,14 @@ function gameOver(remote){
 function newOnlineRound(){
   OL.round++;OL.rev++;
   const d={v:1,status:'play',round:OL.round,rev:OL.rev,adv:S.adv,turn:0,endAfter:null,
-    players:S.players.map(p=>({name:p.name,id:p.id||'',pos:1,stars:0,total:0,keys:[]})),ev:{t:'بدأت جولة جديدة',k:'info'},at:Date.now()};
+    players:S.players.map(p=>({name:p.name,id:p.id||'',car:p.car,pos:1,stars:0,total:0,keys:[]})),ev:{t:'بدأت جولة جديدة',k:'info'},at:Date.now()};
   const ref=OL.ref;OL.q=OL.q.then(()=>ref.set(d)).catch(()=>{});
   enterOnline(d);
 }
 async function startGame(){
   leaveOnline();
-  S.players=[0,1].map(i=>({idx:i,name:S.names[i],pos:0,stars:0,total:0,keys:[],hd:null}));
+  CHOICE=applyColors(CHOICE);
+  S.players=[0,1].map(i=>({idx:i,name:S.names[i],car:CHOICE[i],pos:0,stars:0,total:0,keys:[],hd:null}));
   S.turn=0;S.decks={};S.mdeck=[];S.endAfter=null;S.over=false;S.busy=true;
   $('#setup').hidden=true;$('#game').hidden=false;window.scrollTo(0,0);
   await CUTP;
@@ -1254,10 +1279,22 @@ let MODE='local';
 function setMode(m){
   MODE=m;const on=m==='online';
   $('#mdLocal').setAttribute('aria-pressed',String(!on));$('#mdOnline').setAttribute('aria-pressed',String(on));
-  $('#n1box').hidden=on;$('#whoH').textContent=on?'ما اسمك؟':'من سيلعب؟';$('#n0lab').textContent=on?'اسمك':'اللاعب الأول (السيارة الزرقاء)';
+  $('#n1box').hidden=on;$('#whoH').textContent=on?'ما اسمك ولون سيارتك؟':'من سيلعب؟ اختر اسماً ولون سيارة';renderSwatches();
   $('#onlineBox').hidden=!on;$('#startBtn').hidden=on;$('#lvNote').hidden=!on;olMsg('');
   try{localStorage.setItem('mtc-mode',m);}catch(e){}
   refreshResume();
+}
+function renderSwatches(){
+  const online=MODE==='online';
+  [0,1].forEach(p=>{
+    const box=$('#sw'+p);
+    box.innerHTML=CARS.map((c,i)=>{const on=CHOICE[p]===i,taken=!online&&CHOICE[1-p]===i;
+      return `<button type="button" class="sw${on?' on':''}" data-i="${i}" ${taken?'disabled':''} aria-pressed="${on}" aria-label="السيارة ${c.n}" title="السيارة ${c.n}">${carSide(c.c,c.d)}</button>`;}).join('');
+    $$('.sw',box).forEach(b=>b.onclick=()=>{CHOICE[p]=+b.dataset.i;try{localStorage.setItem('mtc-cars',JSON.stringify(CHOICE));}catch(e){}renderSwatches();});
+  });
+  const dot=i=>`<i class="dot" style="background:${CARS[CHOICE[i]].c}"></i>`;
+  $('#n0lab').innerHTML=dot(0)+(online?'اسمك':'اللاعب الأول')+' · السيارة '+CARS[CHOICE[0]].n;
+  $('#n1lab').innerHTML=dot(1)+'اللاعب الثاني · السيارة '+CARS[CHOICE[1]].n;
 }
 function refreshResume(){const s=loadSession();$('#resumeRow').hidden=!(s&&s.code&&MODE==='online');if(s&&s.code)$('#resumeBtn').textContent='العودة إلى لعبتي (الرمز '+s.code+')';}
 $('#mdLocal').onclick=()=>setMode('local');$('#mdOnline').onclick=()=>setMode('online');
@@ -1283,7 +1320,7 @@ $('#restartBtn').onclick=()=>{
   b.textContent='اضغط للتأكيد';rt=setTimeout(()=>{rt=0;b.textContent='لعبة جديدة';},3000);
 };
 try{if(localStorage.getItem('mtc-mode')==='online')setMode('online');}catch(e){}
-refreshResume();
+renderSwatches();refreshResume();
 checkInvite();
 })();
 </script>

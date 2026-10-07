@@ -71,7 +71,13 @@ img{max-width:100%}
 .fields{display:grid;gap:14px;grid-template-columns:1fr 1fr}
 .lab{display:grid;gap:6px;font-weight:800;min-width:0}
 .lab input{font:inherit;font-weight:700;border:3px solid var(--ink);border-radius:12px;padding:9px 12px;background:#fff;color:var(--ink);width:100%;min-width:0}
-.lab.p0 span{color:var(--p0)} .lab.p1 span{color:var(--p1)}
+.plr{display:grid;gap:8px;align-content:start;min-width:0}
+.swatches{display:flex;flex-wrap:wrap;gap:6px}
+.sw{width:46px;height:34px;padding:2px;border:3px solid transparent;border-radius:12px;background:#fff;display:grid;place-items:center;box-shadow:0 2px 0 rgba(22,41,107,.25)}
+.sw svg{width:100%;height:auto;display:block}
+.sw.on{border-color:var(--ink);background:#FFF3B0;box-shadow:0 3px 0 var(--ink);transform:translateY(-2px)}
+.sw[disabled]{opacity:.3;cursor:not-allowed}
+.lab .dot{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid var(--ink);vertical-align:middle;margin-inline-end:6px}
 .levels{display:grid;gap:12px;grid-template-columns:1fr 1fr}
 .lvl{background:#fff;border:3px solid var(--ink);border-radius:16px;padding:12px 14px;text-align:start;display:grid;gap:2px;box-shadow:0 4px 0 var(--ink)}
 .lvl b{font-family:var(--f-display);font-size:1.15rem}
