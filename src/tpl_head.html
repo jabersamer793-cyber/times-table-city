@@ -227,6 +227,8 @@ img{max-width:100%}
 .confetti{position:fixed;top:-20px;width:10px;height:14px;z-index:80;pointer-events:none;animation:fall linear forwards}
 @keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
 @media (max-width:560px){.olgrid{grid-template-columns:1fr}}
-@media (max-width:420px){.fields,.levels,.results{grid-template-columns:1fr}.pcard{grid-template-columns:1fr;justify-items:center;text-align:center}.pcard .av{width:74px}.pname{justify-content:center}.starrow{justify-content:center}.keys{justify-content:center}.keys img{height:20px}.starrow svg{width:20px;height:20px}.tiles{grid-template-columns:repeat(5,1fr)}}
+/* phones: the two player cards sit side by side, so stack the car above the details */
+@media (max-width:640px){.pcard{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center;padding:8px 6px;overflow:hidden}.pcard .av{width:70px}.pinfo{justify-items:center;width:100%}.pname{justify-content:center;font-size:1.02rem}.starrow{justify-content:center;flex-wrap:wrap}.starrow svg{width:19px;height:19px}.keys{justify-content:center;max-width:100%}.keys img{height:19px}.pwhere,.ptotal{font-size:.8rem}}
+@media (max-width:420px){.fields,.levels,.results{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(5,1fr)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
