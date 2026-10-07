@@ -1,11 +1,17 @@
 <div id="app" class="wrap" dir="rtl" lang="ar">
 
   <section id="setup" class="setup-s">
+    <div class="mathbg" id="mathbg" aria-hidden="true"></div>
     <div class="hero">
-      <img class="castle" id="heroCastle" alt="قلعة أبطال الضرب">
+      <div class="herorow">
+        <figure class="kid k0"><img id="kid0" alt="محمد"><figcaption>محمد</figcaption></figure>
+        <img class="castle" id="heroCastle" alt="قلعة أبطال الضرب">
+        <figure class="kid k1"><img id="kid1" alt="سامر"><figcaption>سامر</figcaption></figure>
+      </div>
       <div class="plank">لعبة</div>
       <h1 class="banner">مدينة جداول الضرب</h1>
       <p class="tagline">تعلّم .. تحدَّ .. اجمع النجوم .. وافتح طريقك نحو قلعة أبطال الضرب!</p>
+      <div class="arrays" id="arrays" aria-label="الضرب بالمربعات"></div>
     </div>
     <div class="setup">
       <div class="panel">
@@ -949,7 +955,42 @@ $('#rulesBtn').onclick=openRules;$('#rulesBtn0').onclick=openRules;
 $('#rulesClose').onclick=()=>{$('#rulesOv').hidden=true;};
 
 /* ---------- setup wiring ---------- */
-$('#heroCastle').src=IMG.castle;
+$('#heroCastle').src=IMG.castle;$('#kid0').src=IMG.av0;$('#kid1').src=IMG.av1;
+// one character picture has a white paper background: show the cut-out once it is ready
+cutout('av1').then(()=>{if(CUT.av1)$('#kid1').src=CUT.av1;});
+/* home screen: floating numbers, × signs, square arrays and shapes */
+(function mathBg(){
+  let seed=99;const R=()=>(seed=seed*16807%2147483647)/2147483647;
+  const cols=['#2E86F0','#F2603F','#3DB24A','#7A55D9','#E39A00','#1FA8A0'];
+  const glyphs=['2','3','4','5','6','7','8','9','×','×','×','=','10','12'];
+  const arr=(r,c,col)=>{let s='';for(let i=0;i<r;i++)for(let j=0;j<c;j++)s+=`<rect x="${j*7+1}" y="${i*7+1}" width="6" height="6" rx="1.2" fill="${col}" stroke="#16296B" stroke-width="1"/>`;return `<svg viewBox="0 0 ${c*7+2} ${r*7+2}" width="${(c*7+2)*1.6}" height="${(r*7+2)*1.6}">${s}</svg>`;};
+  const out=[];
+  for(let i=0;i<40;i++){
+    // keep most of them in the side margins, where the panels do not cover them
+    const side=R()<.5,x=side?R()*22:78+R()*22,y=R()*100,c=cols[Math.floor(R()*6)],t=Math.floor(R()*10);
+    let inner;
+    if(t<5)inner=`<span class="mbn" style="color:${c}">${glyphs[Math.floor(R()*glyphs.length)]}</span>`;
+    else if(t<8)inner=arr(2+Math.floor(R()*3),2+Math.floor(R()*3),c);
+    else if(t<9)inner=`<svg viewBox="0 0 24 24" width="38" height="38"><path d="M12 3L22 20H2Z" fill="${c}" stroke="#16296B" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+    else inner=`<svg viewBox="0 0 24 24" width="34" height="34"><circle cx="12" cy="12" r="9.5" fill="${c}" stroke="#16296B" stroke-width="1.8"/></svg>`;
+    out.push(`<i class="mb" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;--r:${Math.round(R()*50-25)}deg;--s:${(.75+R()*.8).toFixed(2)};animation-delay:-${(R()*7).toFixed(1)}s">${inner}</i>`);
+  }
+  $('#mathbg').innerHTML=out.join('');
+})();
+/* "multiplication with squares": n rows of k squares make n × k */
+(function arrays(){
+  const el=$('#arrays');const cols=['#2E86F0','#F2603F','#3DB24A','#7A55D9'];
+  const draw=()=>{
+    if($('#setup').hidden)return;
+    const used=new Set();
+    el.innerHTML=[0,1,2].map(i=>{
+      let n,k;do{n=rnd(2,4);k=rnd(2,5);}while(used.has(n+'x'+k));used.add(n+'x'+k);
+      let sq='',d=0;for(let r=0;r<n;r++)for(let c=0;c<k;c++)sq+=`<rect x="${c*12+1}" y="${r*12+1}" width="10" height="10" rx="2" fill="${cols[i]}" stroke="#16296B" stroke-width="1.4" style="animation-delay:${(d++)*.07}s"/>`;
+      return `<div class="arr"><svg viewBox="0 0 ${k*12+2} ${n*12+2}" style="width:${(k*12+2)*1.55}px">${sq}</svg><div class="arreq ltr">${n} × ${k} = ${n*k}</div><small>${n===2?'صفّان':n+' صفوف'}، في كل صف ${k}</small></div>`;
+    }).join('');
+  };
+  draw();setInterval(draw,5000);
+})();
 $('#typeChips').innerHTML=['speed','riddle','complete','fill'].map(t=>`<span class="chip" style="background:${TYPES[t].c}">${ICON[t]}${TYPES[t].t}</span>`).join('');
 function setLevel(a){S.adv=a;$('#lv0').setAttribute('aria-pressed',String(!a));$('#lv1').setAttribute('aria-pressed',String(a));}
 $('#lv0').onclick=()=>setLevel(false);$('#lv1').onclick=()=>setLevel(true);
