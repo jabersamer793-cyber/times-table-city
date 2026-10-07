@@ -1,0 +1,839 @@
+<div id="app" class="wrap" dir="rtl" lang="ar">
+
+  <section id="setup" class="setup-s">
+    <div class="hero">
+      <img class="castle" id="heroCastle" alt="قلعة أبطال الضرب">
+      <div class="plank">لعبة</div>
+      <h1 class="banner">مدينة جداول الضرب</h1>
+      <p class="tagline">تعلّم .. تحدَّ .. اجمع النجوم .. وافتح طريقك نحو قلعة أبطال الضرب!</p>
+    </div>
+    <div class="setup">
+      <div class="panel">
+        <h2 class="h2">طريقة اللعب</h2>
+        <div class="levels">
+          <button class="lvl" id="mdLocal" type="button" aria-pressed="true"><b>على نفس الجهاز</b><small>لاعبان يتناوبان على جهاز واحد</small></button>
+          <button class="lvl" id="mdOnline" type="button" aria-pressed="false"><b>أونلاين</b><small>كل لاعب يلعب من جهازه باستخدام رمز اللعبة</small></button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 class="h2" id="whoH">من سيلعب؟</h2>
+        <div class="fields">
+          <label class="lab p0"><span id="n0lab">اللاعب الأول (السيارة الزرقاء)</span><input id="n0" maxlength="14" value="اللاعب الأول" autocomplete="off"></label>
+          <label class="lab p1" id="n1box"><span>اللاعب الثاني (السيارة الخضراء)</span><input id="n1" maxlength="14" value="اللاعب الثاني" autocomplete="off"></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 class="h2">اختر مستوى البطاقات</h2>
+        <div class="levels">
+          <button class="lvl" id="lv0" type="button" aria-pressed="true"><b>من 7 إلى 10 سنوات</b><small>جداول الضرب حتى ×10، وأسئلة قصيرة وواضحة</small></button>
+          <button class="lvl" id="lv1" type="button" aria-pressed="false"><b>من 11 إلى 14 سنة</b><small>حتى ×12، وألغاز من خطوتين ووقت أقصر في تحدي السرعة</small></button>
+        </div>
+        <p class="note" id="lvNote" hidden>في اللعب أونلاين يختار المستوى من ينشئ اللعبة.</p>
+      </div>
+      <div class="panel" id="typesPanel">
+        <h2 class="h2">تحديات اللعبة</h2>
+        <div class="types" id="typeChips"></div>
+      </div>
+      <div class="panel online" id="onlineBox" hidden>
+        <h2 class="h2">اللعب أونلاين</h2>
+        <p class="olmsg" id="olMsg" hidden></p>
+        <div class="row-c" id="resumeRow" hidden><button class="btn alt" id="resumeBtn" type="button">العودة إلى لعبتي</button></div>
+        <div class="olgrid">
+          <div class="olcol">
+            <b>أنشئ لعبة وادعُ صديقك</b>
+            <button class="btn" id="hostBtn" type="button">أنشئ لعبة جديدة</button>
+          </div>
+          <div class="olcol">
+            <label class="lab" for="joinCode"><b>أو انضم إلى لعبة صديقك</b></label>
+            <div class="joinrow"><input id="joinCode" inputmode="numeric" maxlength="4" placeholder="رمز من 4 أرقام" autocomplete="off" dir="ltr"><button class="btn green" id="joinBtn" type="button">انضم</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="row-c">
+        <button class="btn" id="startBtn" type="button">ابدأ الرحلة</button>
+        <button class="btn alt" id="rulesBtn0" type="button">كيف تُلعب؟</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="game" hidden>
+    <div class="topbar">
+      <h1 class="logo">مدينة جداول الضرب</h1>
+      <div class="tools">
+        <span class="olbadge" id="olBadge" hidden></span>
+        <button class="btn sm alt" id="rulesBtn" type="button">القواعد</button>
+        <button class="btn sm alt" id="soundBtn" type="button" aria-pressed="true">الصوت: يعمل</button>
+        <button class="btn sm alt" id="restartBtn" type="button">لعبة جديدة</button>
+      </div>
+    </div>
+    <div class="layout">
+      <div id="players"></div>
+      <div class="boardbox"><div class="board" id="board"></div></div>
+    </div>
+  </section>
+
+  <div class="feed" id="feed" role="status" aria-live="polite"></div>
+  <div class="ov" id="cardOv" hidden><div class="box" id="cardBox"></div></div>
+  <div class="ov" id="annOv" hidden><div class="box"><div class="card" style="--tc:var(--violet)"><div class="ann" id="annBox"></div></div></div></div>
+  <div class="ov" id="lobbyOv" hidden><div class="box"><div class="card" style="--tc:var(--green)"><div class="ann">
+    <h3>رمز لعبتك</h3>
+    <div class="bigcode" id="lobbyCode"></div>
+    <p>أرسل هذا الرمز لصديقك. يفتح صديقك رابط اللعبة نفسه، ويختار «أونلاين»، ثم يكتب الرمز ويضغط «انضم».</p>
+    <p class="waiting">بانتظار انضمام صديقك…</p>
+    <button class="btn alt" id="lobbyCancel" type="button">إلغاء</button>
+  </div></div></div></div>
+  <div class="ov" id="rulesOv" hidden><div class="box"><div class="card" style="--tc:var(--blue)">
+    <div class="card-h"><div class="htitle">دليل اللعبة</div></div>
+    <div class="card-b"><div class="rules" id="rulesBody"></div><button class="btn" id="rulesClose" type="button">فهمت، هيّا نلعب</button></div>
+  </div></div></div>
+  <div class="ov" id="endOv" hidden><div class="box"><div class="card" style="--tc:var(--violet)"><div class="end" id="endBox"></div></div></div></div>
+</div>
+
+<script>
+/*ASSETS*/
+</script>
+<script>
+(function(){
+'use strict';
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]]}return a};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const E=s=>`<span class="eq">${s}</span>`;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- data ---------- */
+const CITIES={
+  2:{name:'حديقة الألعاب',img:'park',key:'kPlay',c:'#3DB24A'},
+  3:{name:'مطعم البيتزا',img:'pizza',key:'kPizza',c:'#F2603F'},
+  4:{name:'المقهى',img:'coffee',key:'kCoffee',c:'#8A5A3B'},
+  5:{name:'المدرسة',img:'school',key:'kBus',c:'#2E86F0'},
+  6:{name:'المستشفى',img:'hospital',key:'kAmb',c:'#1FA8A0'},
+  7:{name:'محطة الإطفاء',img:'fire',key:'kFire',c:'#E5483B'},
+  8:{name:'مركز الشرطة',img:'police',key:'kPolice',c:'#3A4FA8'},
+  9:{name:'البنك',img:'bank',key:'kMoney',c:'#C48A00'}
+};
+const NODES=[{t:'start'},{t:'city',n:2},{t:'city',n:3},{t:'work'},{t:'city',n:4},{t:'city',n:5},{t:'city',n:6},{t:'work'},{t:'city',n:7},{t:'city',n:8},{t:'work'},{t:'city',n:9},{t:'castle'}];
+const TYPES={
+  fill:{t:'أكمل الفراغ',c:'#2E86F0'}, complete:{t:'أكمل الجدول',c:'#7A55D9'},
+  riddle:{t:'لغز',c:'#3DB24A'}, speed:{t:'تحدي السرعة',c:'#F2603F'}
+};
+const ICON={
+  speed:'<svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="8" fill="#fff" stroke="#16296B" stroke-width="2.4"/><path d="M12 14V9M9.5 3h5" stroke="#16296B" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  riddle:'<svg viewBox="0 0 24 24"><path d="M12 2.5a6.5 6.5 0 0 0-3.6 11.9c.7.5 1.1 1.2 1.1 2h5c0-.8.4-1.5 1.1-2A6.5 6.5 0 0 0 12 2.5Z" fill="#FFE070" stroke="#16296B" stroke-width="2.2"/><path d="M9.5 20h5M10.5 22h3" stroke="#16296B" stroke-width="2.2" stroke-linecap="round"/></svg>',
+  complete:'<svg viewBox="0 0 24 24"><path d="M4 4h6a2 2 0 1 1 4 0h6v6a2 2 0 1 0 0 4v6H4Z" fill="#fff" stroke="#16296B" stroke-width="2.2" stroke-linejoin="round"/></svg>',
+  fill:'<svg viewBox="0 0 24 24"><path d="M4 20l1-5L16 4l4 4L9 19Z" fill="#FFE070" stroke="#16296B" stroke-width="2.2" stroke-linejoin="round"/><path d="M14 6l4 4" stroke="#16296B" stroke-width="2.2"/></svg>'
+};
+const STAR_PATH='M12 2.4l2.95 6.35 6.95.8-5.15 4.75 1.4 6.85L12 17.7l-6.15 3.45 1.4-6.85L2.1 9.55l6.95-.8z';
+const star=(on,sz)=>`<svg viewBox="0 0 24 24" ${sz?`width="${sz}" height="${sz}"`:''} aria-hidden="true"><path d="${STAR_PATH}" fill="${on?'#FFC52E':'#E6E9F5'}" stroke="#16296B" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+const stars=(n,tot)=>Array.from({length:tot||n},(_,i)=>star(i<n)).join('');
+const PC=['#2F7BEA','#2BA84A'];
+const PCD=['#1B56B5','#1C7A33'];
+const CARNAME=['السيارة الزرقاء','السيارة الخضراء'];
+
+/* ---------- sound ---------- */
+const S={players:[],turn:0,adv:false,decks:{},mdeck:[],endAfter:null,busy:false,sound:true,over:false,names:['اللاعب الأول','اللاعب الثاني']};
+let AC=null;
+function tone(f,d,t,type,v){
+  if(!S.sound)return;
+  try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();
+    o.type=type||'sine';o.frequency.value=f;v=v||.14;const st=AC.currentTime+(t||0);
+    g.gain.setValueAtTime(v,st);g.gain.exponentialRampToValueAtTime(.001,st+d);o.connect(g);g.connect(AC.destination);o.start(st);o.stop(st+d+.03);}catch(e){}
+}
+const sfx={
+  ok(){[523,659,784].forEach((f,i)=>tone(f,.2,i*.09,'triangle'))},
+  bad(){tone(240,.25,0,'sawtooth',.07);tone(190,.3,.16,'sawtooth',.07)},
+  key(){[784,988,1175,1568].forEach((f,i)=>tone(f,.28,i*.1,'triangle'))},
+  tick(){tone(900,.05,0,'square',.04)},
+  step(){tone(180,.12,0,'sawtooth',.05);tone(240,.08,.06,'sine',.06)},
+  horn(){tone(392,.14,0,'square',.05);tone(392,.2,.18,'square',.05)},
+  win(){[523,659,784,1047,784,1047,1319].forEach((f,i)=>tone(f,.24,i*.12,'triangle'))}
+};
+
+/* ---------- card generation ---------- */
+function genCard(type,n,k,L){
+  const P=n*k, base={type,L,stars:L,n,k,title:TYPES[type].t};
+  if(type==='fill'){
+    const v=pick(L===1?['a']:L===2?['a','b']:['b','c']);
+    const ex=E(`${n} × ${k} = ${P}`);
+    if(v==='a')return{...base,tpl:`<div class="eq big">${n} × ${k} = [[0]]</div>`,fields:[{ans:P}],explain:ex};
+    if(v==='b')return{...base,tpl:`<div class="eq big">${n} × [[0]] = ${P}</div>`,fields:[{ans:k}],explain:ex};
+    return{...base,tpl:`<div class="eq big">[[0]] × ${k} = ${P}</div>`,fields:[{ans:n}],explain:ex};
+  }
+  if(type==='complete'){
+    // the next line of the times table: no brackets, just "n × k = ?"
+    const a=Math.max(1,k-1);
+    if(L<3)return{...base,tpl:`<div class="eq">${n} × ${a} = ${n*a}</div><div class="eq big">${n} × ${k} = [[0]]</div>`,fields:[{ans:P}],explain:E(`${n} × ${k} = ${P}`)};
+    return{...base,tpl:`<div class="eq">${n} × ${a} = ${n*a}</div><div class="eq">${n} × ${k} = [[0]]</div><div class="eq">${n} × ${k+1} = [[1]]</div>`,fields:[{ans:P},{ans:n*(k+1)}],explain:E(`${n} × ${k} = ${P}`)+'  '+E(`${n} × ${k+1} = ${n*(k+1)}`)};
+  }
+  if(type==='riddle'){
+    const IT=[{c:'صناديق',ci:'صندوق',w:'البرتقال',q:'برتقالة'},{c:'أكياس',ci:'كيس',w:'التفاح',q:'تفاحة'},{c:'علب',ci:'علبة',w:'الأقلام',q:'قلماً'},{c:'سلال',ci:'سلة',w:'البيض',q:'بيضة'},{c:'رفوف',ci:'رف',w:'الكتب',q:'كتاباً'},{c:'أطباق',ci:'طبق',w:'الكعك',q:'كعكة'}];
+    const kind=pick(L===1?['product','story']:L===2?['story','unknown']:['unknown','between']);
+    let text,ans,ex;
+    const it=pick(IT);
+    if(kind==='product'){text=`أنا ناتج ضرب ${E(n+' × '+k)}. من أنا؟`;ans=P;ex=E(`${n} × ${k} = ${P}`);}
+    else if(kind==='story'){text=`في المتجر ${it.c} عددها ${k}، وفي كل ${it.ci} ${n} من ${it.w}. كم ${it.q} في المتجر كله؟`;ans=P;ex=E(`${n} × ${k} = ${P}`);}
+    else if(kind==='unknown'){text=`ضربتُ عدداً في ${n} فكان الناتج ${P}. ما هذا العدد؟`;ans=k;ex=E(`${n} × ${k} = ${P}`);}
+    else if(kind==='between'){text=`أنا عدد من جدول ${n}، أكبر من ${P-n+1} وأصغر من ${P+n-1}. من أنا؟`;ans=P;ex=E(`${n} × ${k} = ${P}`);}
+    else if(kind==='double'){text=`أنا ضعف ناتج ضرب ${E(n+' × '+k)}. من أنا؟`;ans=2*P;ex=E(`${n} × ${k} = ${P}`)+' ثم '+E(`${P} × 2 = ${2*P}`);}
+    else if(kind==='story2'){const m=rnd(2,Math.min(9,Math.floor(P/2)));text=`في المتجر ${it.c} عددها ${k}، وفي كل ${it.ci} ${n} من ${it.w}. أُخذ منها ${m}. كم ${it.q} بقي؟`;ans=P-m;ex=E(`${n} × ${k} = ${P}`)+' ثم '+E(`${P} − ${m} = ${P-m}`);}
+    else if(kind==='half'){text=`أنا نصف ناتج ضرب ${E(n+' × '+(2*k))}. من أنا؟`;ans=P;ex=E(`${n} × ${2*k} = ${2*P}`)+' ثم نصفه '+E(P);}
+    else if(kind==='twostep'){text=`ضربتُ عدداً في ${n} ثم أضفتُ ${n} فكان الناتج ${P+n}. ما هذا العدد؟`;ans=k;ex=E(`${P+n} − ${n} = ${P}`)+' ثم '+E(`${P} ÷ ${n} = ${k}`);}
+    else {text=`أنا ناتج ${E(n+' × '+k)} بعد أن طرحتُ منه ${n}. من أنا؟`;ans=P-n;ex=E(`${n} × ${k} = ${P}`)+' ثم '+E(`${P} − ${n} = ${P-n}`);}
+    return{...base,tpl:`<p>${text}</p><div class="eq big">[[0]]</div>`,fields:[{ans}],explain:ex,riddle:kind};
+  }
+  /* speed */
+  const T=S.adv?[10,8,6]:[12,10,8];
+  const flip=L===3&&Math.random()<.4;
+  return{...base,time:T[L-1],tpl:flip?`<div class="eq big">${n} × [[0]] = ${P}</div>`:`<div class="eq big">${n} × ${k} = [[0]]</div>`,fields:[{ans:flip?k:P}],explain:E(`${n} × ${k} = ${P}`)};
+}
+function genDeck(n){
+  const mx=S.adv?12:10;
+  const pools={1:[2,3,4,5,6,10],2:[4,5,6,7,8,9],3:S.adv?[6,7,8,9,10,11,12]:[6,7,8,9,10]};
+  const extra={1:'fill',2:'complete',3:'riddle'};
+  const out=[];
+  for(const L of [1,2,3]){
+    const ks=shuffle(pools[L]).slice(0,5);
+    const ts=['fill','complete','riddle','speed',extra[L]];
+    ts.forEach((t,i)=>out.push(genCard(t,n,Math.min(ks[i],mx),L)));
+  }
+  return shuffle(out);
+}
+function nextCard(n){
+  if(!S.decks[n]||!S.decks[n].length)S.decks[n]=genDeck(n);
+  return S.decks[n].pop();
+}
+
+/* ---------- maintenance workshop (6 extra challenges) ---------- */
+function buildM(id,n){
+  const base={type:'work',work:true,id,stars:1,n};
+  if(id===1){const k=rnd(3,9);return{...base,title:'أصلح العطل',instr:'أكمل العملية لإصلاح العطل',tpl:`<div class="eq big">${n} × [[0]] = ${n*k}</div>`,fields:[{ans:k}],explain:E(`${n} × ${k} = ${n*k}`)};}
+  if(id===2){const ks=shuffle([3,4,5,6,7,8,9]).slice(0,3);return{...base,title:'صيانة سريعة',instr:'حل 3 عمليات ضرب خلال 20 ثانية',time:20,
+    tpl:ks.map((k,i)=>`<div class="eq">${n} × ${k} = [[${i}]]</div>`).join(''),fields:ks.map(k=>({ans:n*k})),explain:ks.map(k=>E(`${n} × ${k} = ${n*k}`)).join('  ')};}
+  if(id===3){const T=pick([12,16,18,20,24,30,36]);const prs=[];for(let a=1;a<=T;a++)if(T%a===0)prs.push(`${a} × ${T/a}`);
+    return{...base,title:'العجلة المثقوبة',instr:`اذكر 3 عمليات ضرب مختلفة ناتجها ${T}`,autoAdv:false,
+      tpl:[0,1,2].map(i=>`<div class="eq">[[${i*2}]] × [[${i*2+1}]] = ${T}</div>`).join(''),fields:Array.from({length:6},()=>({ans:0})),
+      check:v=>{const seen=new Set();for(let i=0;i<6;i+=2){const a=v[i],b=v[i+1];if(!(a>0&&b>0&&a*b===T))return false;const key=a+'x'+b;if(seen.has(key))return false;seen.add(key);}return true;},
+      explain:'بعض الإجابات الممكنة: '+E(prs.join(' ، '))};}
+  if(id===4){
+    const sets={12:[[2,6],[3,4],[4,3],[6,2]],18:[[2,9],[3,6],[6,3],[9,2]],20:[[2,10],[4,5],[5,4],[10,2]],24:[[3,8],[4,6],[6,4],[8,3]],30:[[3,10],[5,6],[6,5],[10,3]],36:[[4,9],[6,6],[9,4]],16:[[2,8],[4,4],[8,2]]};
+    const P=+pick(Object.keys(sets));const three=shuffle(sets[P]).slice(0,3);
+    let a,b;do{a=rnd(2,9);b=rnd(2,9);}while(a*b===P);
+    const items=shuffle([...three.map(p=>({t:`${p[0]} × ${p[1]}`,odd:false})),{t:`${a} × ${b}`,odd:true}]);
+    return{...base,title:'فحص المحرك',instr:'أي ناتج مختلف؟ اضغط على العملية المختلفة',
+      explain:'ثلاث عمليات ناتجها '+E(P)+' والمختلفة هي '+E(`${a} × ${b} = ${a*b}`),
+      custom(el,finish){
+        el.innerHTML=`<div class="choices">${items.map((it,i)=>`<button type="button" class="choice" data-i="${i}">${it.t}</button>`).join('')}</div>`;
+        $$('.choice',el).forEach(b=>b.onclick=()=>{const it=items[+b.dataset.i];$$('.choice',el).forEach((x,j)=>{x.disabled=true;if(items[j].odd)x.classList.add('good');});if(!it.odd)b.classList.add('wrong');finish(it.odd);});
+      }};}
+  if(id===5){
+    const prods=Array.from({length:10},(_,i)=>n*(i+1));
+    return{...base,title:'إعادة التشغيل',instr:`قل جدول ${n} بالعكس من 10 إلى 1`,explain:E(prods.slice().reverse().join(' ، ')),
+      custom(el,finish){
+        let k=10,lives=2;const order=shuffle(prods);
+        const draw=()=>{el.innerHTML=`<div class="ask">ما ناتج <span class="ltr">${n} × ${k}</span> ؟</div><div class="tiles">${order.map(v=>`<button type="button" class="tile${v<0?' used':''}" data-v="${v}">${Math.abs(v)}</button>`).join('')}</div><div class="lives">فرص الخطأ المتبقية: ${lives-1}</div>`;
+          $$('.tile',el).forEach(b=>{const v=+b.dataset.v;if(v<0){b.disabled=true;return;}b.onclick=()=>{
+            if(v===n*k){order[order.indexOf(v)]=-v;tone(520,.08,0,'sine',.08);k--;if(k===0){draw();finish(true);return;}draw();}
+            else{lives--;sfx.bad();b.classList.add('wrong','shake');if(lives<=0){finish(false);return;}setTimeout(draw,420);}
+          };});};
+        draw();
+      }};}
+  const j=rnd(1,5);const t=[j,j+1,j+2,j+3,j+4].map(x=>x*n);
+  return{...base,title:'الميكانيكي الشاطر',instr:'أكمل النمط',tpl:`<div class="eq big">${t[0]} ، ${t[1]} ، ${t[2]} ، [[0]] ، [[1]]</div>`,fields:[{ans:t[3]},{ans:t[4]}],explain:E(t.join(' ، '))+' (نضيف '+n+' كل مرة)'};
+}
+function nextM(n){
+  if(!S.mdeck.length)S.mdeck=shuffle([1,2,3,4,5,6]);
+  return buildM(S.mdeck.pop(),n);
+}
+
+/* ---------- hourglass ---------- */
+const hgSVG=(id)=>`<svg class="hg" viewBox="0 0 100 140" aria-hidden="true"><defs><clipPath id="hgc${id}"><path d="M22 14H78C78 54 56 62 56 70S78 86 78 126H22C22 86 44 78 44 70S22 54 22 14Z"/></clipPath></defs>
+<path d="M22 14H78C78 54 56 62 56 70S78 86 78 126H22C22 86 44 78 44 70S22 54 22 14Z" fill="#EAF7FF"/>
+<g clip-path="url(#hgc${id})"><rect class="hgT" x="0" y="14" width="100" height="56" fill="#F5B72A"/><rect class="hgB" x="0" y="126" width="100" height="0" fill="#F5B72A"/></g>
+<line class="hgS" x1="50" y1="68" x2="50" y2="124" stroke="#F5B72A" stroke-width="2.6"/>
+<path d="M22 14H78C78 54 56 62 56 70S78 86 78 126H22C22 86 44 78 44 70S22 54 22 14Z" fill="none" stroke="#16296B" stroke-width="4" stroke-linejoin="round"/>
+<rect x="12" y="4" width="76" height="11" rx="5" fill="#CF9250" stroke="#16296B" stroke-width="3.5"/><rect x="12" y="125" width="76" height="11" rx="5" fill="#CF9250" stroke="#16296B" stroke-width="3.5"/></svg>`;
+function setHG(root,p){
+  p=Math.max(0,Math.min(1,p));
+  const t=$('.hgT',root),b=$('.hgB',root),s=$('.hgS',root); if(!t)return;
+  t.setAttribute('y',14+p*56);t.setAttribute('height',56-p*56);
+  b.setAttribute('y',126-p*56);b.setAttribute('height',p*56);
+  s.style.display=(p>0&&p<1)?'':'none';
+}
+
+/* ---------- card UI ---------- */
+function showCard(card){
+  return new Promise(resolve=>{
+    const ov=$('#cardOv'),box=$('#cardBox');
+    const work=!!card.work;
+    const tp=work?null:TYPES[card.type];
+    const city=CITIES[card.n];
+    const head=work
+      ?`<div class="card-h"><span class="mnum">${card.id}</span><div class="htitle">${card.title}</div><div class="hstars">${star(true)}</div></div>`
+      :`<div class="card-h"><div class="hbadge"><img src="${IMG[city.img]}" alt=""><span class="ltr">×${card.n}</span></div><div class="htitle">${ICON[card.type]}${card.title}</div><div class="hstars">${stars(card.stars)}</div></div>`;
+    box.innerHTML=`<div class="card ${work?'work':''}" style="${work?'':`--tc:${tp.c}`}">${head}<div class="card-b" id="cb"></div><div class="card-f" id="cf"></div></div>`;
+    ov.hidden=false;ov.scrollTop=0;
+    const cb=$('#cb'),cf=$('#cf');
+    let vals=(card.fields||[]).map(()=>''),active=0,done=false,raf=0,t0=0;
+    const instr=card.instr?`<p class="instr">${card.instr}</p>`:'';
+    const icon=work?`<img class="micon" src="${IMG['m'+card.id]}" alt="">`:'';
+
+    function paint(){
+      $$('.fld',cb).forEach(b=>{const i=+b.dataset.i;b.textContent=vals[i]||'؟';b.classList.toggle('on',!done&&i===active);b.classList.toggle('empty',!vals[i]);});
+    }
+    function mountQ(){
+      const q=document.createElement('div');q.className='q';
+      q.innerHTML=card.tpl.replace(/\[\[(\d+)\]\]/g,(m,i)=>`<button type="button" class="fld" data-i="${i}" aria-label="الحقل ${+i+1}"></button>`);
+      cb.appendChild(q);
+      $$('.fld',q).forEach(b=>b.onclick=()=>{if(done)return;active=+b.dataset.i;paint();});
+      paint();
+    }
+    function mountPad(){
+      const keys=[1,2,3,4,5,6,7,8,9,'back',0,'go'];
+      cf.innerHTML=`<div class="pad">${keys.map(k=>k==='back'?'<button type="button" class="key back" data-k="back" aria-label="مسح"><svg viewBox="0 0 24 24"><path d="M9 5h11v14H9L3 12z" fill="none" stroke="#16296B" stroke-width="2.4" stroke-linejoin="round"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5" stroke="#16296B" stroke-width="2.4" stroke-linecap="round"/></svg></button>':k==='go'?'<button type="button" class="key go" data-k="go" aria-label="تأكيد"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#16296B" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>':`<button type="button" class="key" data-k="${k}">${k}</button>`).join('')}</div>`;
+      $$('.key',cf).forEach(b=>b.onclick=()=>{const k=b.dataset.k;k==='back'?back():k==='go'?submit():press(k);});
+    }
+    function press(d){
+      if(done)return;
+      if(vals[active].length>=4)return;
+      vals[active]+=d;sfx.tick();
+      const f=card.fields;
+      if(card.autoAdv!==false&&f.length>1&&vals[active].length===String(f[active].ans).length&&active<f.length-1)active++;
+      paint();
+    }
+    function back(){if(done)return;vals[active]=vals[active].slice(0,-1);paint();}
+    function submit(){
+      if(done)return;
+      const em=vals.findIndex(v=>v==='');
+      if(em>=0){active=em;paint();const el=$$('.fld',cb)[em];if(el){el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');}return;}
+      const nums=vals.map(Number);
+      let ok,per=null;
+      if(card.check){ok=card.check(nums);}
+      else{per=card.fields.map((f,i)=>nums[i]===f.ans);ok=per.every(Boolean);}
+      $$('.fld',cb).forEach(b=>{const i=+b.dataset.i;b.classList.add(per?(per[i]?'good':'wrong'):(ok?'good':'wrong'));});
+      finish(ok,'');
+    }
+    function finish(ok,why){
+      if(done)return;done=true;cancelAnimationFrame(raf);
+      document.removeEventListener('keydown',onKey);
+      paint();
+      const tm=$('.timer',cb);if(tm)tm.classList.remove('low');
+      ok?sfx.ok():sfx.bad();
+      const award=card.stars;
+      const title=ok?pick(['إجابة صحيحة! أحسنت','ممتاز! إجابة صحيحة','رائع! أنت بطل']):why==='time'?'انتهى الوقت':'ليست هذه المرة';
+      const sub=ok?(work?`<div class="rstars">${star(true)}<span>+1 نجمة إضافية</span></div>`:`<div class="rstars"><span>+${award}</span>${stars(award)}</div>`)
+        :(work?'<div>لا بأس، لا توجد نجمة إضافية هذه المرة.</div>':'');
+      const exp=ok?'':`<div class="rexp"><b>الحل:</b> ${card.explain}</div>`;
+      cf.innerHTML=`<div class="res ${ok?'ok':'bad'}"><div class="rtitle">${title}</div>${sub}${exp}<button class="btn" id="cont" type="button">متابعة</button></div>`;
+      const c=$('#cont');c.focus({preventScroll:true});
+      c.onclick=()=>{ov.hidden=true;resolve({ok});};
+    }
+    function onKey(e){
+      if(done||!card.fields)return;
+      let k=e.key;
+      if('٠١٢٣٤٥٦٧٨٩'.includes(k)&&k.length===1)k=String('٠١٢٣٤٥٦٧٨٩'.indexOf(k));
+      if(/^[0-9]$/.test(k)){e.preventDefault();press(k);}
+      else if(k==='Backspace'){e.preventDefault();back();}
+      else if(k==='Enter'){e.preventDefault();submit();}
+      else if(k==='Tab'){e.preventDefault();active=(active+(e.shiftKey?card.fields.length-1:1))%card.fields.length;paint();}
+    }
+    function startPlay(){
+      cb.innerHTML=instr+icon;
+      if(card.time){
+        const tm=document.createElement('div');tm.className='timer';
+        tm.innerHTML=hgSVG('p')+'<div class="tnum">'+card.time+'</div><div class="tbar"><i></i></div>';
+        cb.appendChild(tm);
+        const total=card.time*1000;t0=performance.now();setHG(tm,0);
+        let lastSec=card.time;
+        const tick=now=>{
+          const el=now-t0,left=Math.max(0,total-el);
+          setHG(tm,el/total);$('.tbar i',tm).style.transform=`scaleX(${left/total})`;
+          const s=Math.ceil(left/1000);$('.tnum',tm).textContent=s;
+          if(s!==lastSec){lastSec=s;if(s<=3&&s>0)sfx.tick();}
+          tm.classList.toggle('low',s<=3);
+          if(left<=0){finish(false,'time');return;}
+          raf=requestAnimationFrame(tick);
+        };
+        raf=requestAnimationFrame(tick);
+      }
+      if(card.custom){const holder=document.createElement('div');cb.appendChild(holder);cf.innerHTML='';card.custom(holder,ok=>finish(ok,''));}
+      else{mountQ();mountPad();document.addEventListener('keydown',onKey);}
+    }
+    if(card.time){
+      cb.innerHTML=instr+icon+`<div class="intro">${hgSVG('i')}<p>هذا تحدي سرعة! لديك <b>${card.time} ثانية</b> للإجابة.<br>اضغط ابدأ عندما تكون جاهزاً.</p></div>`;
+      setHG(cb,0);
+      cf.innerHTML='<div class="res"><button class="btn" id="goBtn" type="button">ابدأ</button></div>';
+      $('#goBtn').onclick=startPlay;$('#goBtn').focus({preventScroll:true});
+    }else startPlay();
+  });
+}
+
+/* ---------- announce / feed ---------- */
+function announce({img,cls,title,text,btn}){
+  return new Promise(res=>{
+    $('#annBox').innerHTML=`${img?`<img class="${cls||''}" src="${img}" alt="">`:''}<h3>${title}</h3><p>${text}</p><button class="btn" id="annBtn" type="button">${btn||'متابعة'}</button>`;
+    const ov=$('#annOv');ov.hidden=false;
+    const b=$('#annBtn');b.focus({preventScroll:true});
+    b.onclick=()=>{ov.hidden=true;res();};
+  });
+}
+let feedT=0;
+function showFeed(text,kind){
+  const f=$('#feed');f.textContent=text;f.className='feed show '+(kind||'');
+  clearTimeout(feedT);feedT=setTimeout(()=>f.classList.remove('show'),kind==='turn'?6000:4200);
+}
+function confetti(){
+  const cols=['#FFC52E','#F2603F','#2E86F0','#3DB24A','#7A55D9'];
+  for(let i=0;i<46;i++){const d=document.createElement('i');d.className='confetti';d.style.left=Math.random()*100+'vw';d.style.background=pick(cols);d.style.animationDuration=(2.2+Math.random()*2.2)+'s';d.style.animationDelay=Math.random()*.8+'s';d.style.borderRadius=Math.random()<.5?'50%':'2px';document.body.appendChild(d);setTimeout(()=>d.remove(),6000);}
+}
+
+/* ---------- cut-out buildings (remove the light paper background so they stand on the board) ---------- */
+const CUT={},DOME={};
+function cutout(key){
+  return new Promise(res=>{
+    const im=new Image();
+    im.onload=()=>{try{
+      const sc=Math.min(1,420/Math.max(im.width,im.height)),w=Math.round(im.width*sc),h=Math.round(im.height*sc);
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;const cx=cv.getContext('2d');cx.drawImage(im,0,0,w,h);
+      const d=cx.getImageData(0,0,w,h),p=d.data,N=w*h,seen=new Uint8Array(N),from=new Int32Array(N),st=[];
+      const seed=i=>{from[i]=i;st.push(i);};
+      // white paper background: only strip near-pure white so light walls survive
+      let wb=0;for(const i of [0,w-1,N-w,N-1])if(p[i*4]+p[i*4+1]+p[i*4+2]>735)wb++;const white=wb>=2;
+      for(let x=0;x<w;x++){seed(x);seed((h-1)*w+x);}for(let y=0;y<h;y++){seed(y*w);seed(y*w+w-1);}
+      while(st.length){
+        const i=st.pop();if(seen[i])continue;
+        const o=i*4,q=from[i]*4;
+        if(p[o+3]>24){
+          const diff=Math.abs(p[o]-p[q])+Math.abs(p[o+1]-p[q+1])+Math.abs(p[o+2]-p[q+2]);
+          if(diff>30||p[o]+p[o+1]+p[o+2]<(white?728:430))continue;
+        }
+        seen[i]=1;
+        const x=i%w;
+        if(x>0&&!seen[i-1]){from[i-1]=i;st.push(i-1);}
+        if(x<w-1&&!seen[i+1]){from[i+1]=i;st.push(i+1);}
+        if(i>=w&&!seen[i-w]){from[i-w]=i;st.push(i-w);}
+        if(i<N-w&&!seen[i+w]){from[i+w]=i;st.push(i+w);}
+      }
+      for(let i=0;i<N;i++){
+        if(seen[i]){p[i*4+3]=0;continue;}
+        const x=i%w;
+        if((x>0&&seen[i-1])||(x<w-1&&seen[i+1])||(i>=w&&seen[i-w])||(i<N-w&&seen[i+w]))p[i*4+3]=Math.min(p[i*4+3],150);
+      }
+      let gone=0;for(let i=0;i<N;i++)gone+=seen[i];
+      // a full scene (sky, grass) barely cuts out: keep the original and show it as a dome instead
+      if(gone/N<.12){DOME[key]=1;return res();}
+      cx.putImageData(d,0,0);CUT[key]=cv.toDataURL('image/png');
+    }catch(e){}res();};
+    im.onerror=()=>res();
+    im.src=IMG[key];
+  });
+}
+const CUTP=Promise.all([...Object.values(CITIES).map(c=>c.img),'barrier'].map(cutout));
+const pic=k=>CUT[k]||IMG[k];
+
+/* ---------- board ---------- */
+/* board units: 100 wide, BH tall (the board box has the same aspect ratio, so nothing stretches) */
+const BH=116;
+function npos(i){const row=Math.floor(i/4),idx=i%4;let col=row%2===0?3-idx:idx;if(i===12)col=0;return{x:(col+.5)*25,y:i===12?103:17+row*29.5};}
+const pctY=y=>y/BH*100;
+/* scenery: trees, bushes, houses, street lamps, traffic lights and zebra crossings, placed once with a fixed seed */
+function scenery(){
+  let seed=20261007;const R=()=>(seed=seed*16807%2147483647)/2147483647;
+  const segs=[];for(let i=0;i<12;i++)segs.push([npos(i),npos(i+1)]);
+  const dRoad=(x,y)=>Math.min(...segs.map(([a,b])=>{const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy)));return Math.hypot(x-a.x-t*dx,y-a.y-t*dy);}));
+  const onNode=(x,y)=>NODES.some((nd,i)=>{const p=npos(i),c=nd.t==='castle',hw=c?12:8.6,top=c?25:17;return Math.abs(x-p.x)<hw&&y>p.y-top&&y<p.y+6;});
+  const onDeck=(x,y)=>x>26&&y>88;
+  const placed=[],out=[];
+  const free=(x,y,r)=>x>r+.5&&x<99.5-r&&y>r+1&&y<BH-1&&dRoad(x,y)>7.8+r&&!onNode(x,y)&&!onDeck(x,y)&&placed.every(([a,b,c])=>Math.hypot(a-x,b-y)>c+r);
+  const scatter=(kind,n,r,tries)=>{let k=0;for(let t=0;t<tries&&k<n;t++){const x=R()*100,y=R()*BH;if(free(x,y,r)){placed.push([x,y,r]);out.push({k:kind,x,y,v:R()});k++;}}};
+  scatter('house',8,4.3,900);
+  scatter('pond',1,5.5,600);
+  scatter('tree',70,2.1,4000);
+  scatter('pine',22,1.8,3000);
+  scatter('bush',40,1.1,3000);
+  scatter('flower',30,.7,3000);
+  // street furniture sits on the sidewalk, right at the curb
+  NODES.forEach((nd,i)=>{if(nd.t!=='city')return;const p=npos(i);out.push({k:'light',x:p.x+9.2,y:p.y-6.6});});
+  segs.forEach(([a,b],i)=>{if(a.y!==b.y)return;for(const f of [.33,.67]){const x=a.x+(b.x-a.x)*f;out.push({k:'lamp',x,y:a.y+(i%2?-5.6:6.4)});}});
+  out.sort((a,b)=>a.y-b.y);
+  const sh=(x,y,rx)=>`<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${rx*.32}" fill="#16296B" opacity=".18"/>`;
+  return out.map(o=>{const {x,y}=o;
+    if(o.k==='tree'){const s=.85+o.v*.35,g=o.v<.5?'#3E9E3A':'#47AE45';return `<g transform="translate(${x} ${y}) scale(${s})">${sh(0,0,2)}<rect x="-.38" y="-2.6" width=".76" height="2.6" fill="#8A5A3B"/><circle cx="0" cy="-3.9" r="2.1" fill="${g}" stroke="#16296B" stroke-width=".32"/><circle cx="-.7" cy="-4.5" r=".9" fill="#7ED36A"/></g>`;}
+    if(o.k==='pine'){const s=.85+o.v*.3;return `<g transform="translate(${x} ${y}) scale(${s})">${sh(0,0,1.6)}<rect x="-.3" y="-1.4" width=".6" height="1.4" fill="#8A5A3B"/><path d="M0 -6.4L2 -2.8H1L2.3 -1.2H-2.3L-1 -2.8H-2Z" fill="#2E8A4E" stroke="#16296B" stroke-width=".3" stroke-linejoin="round"/></g>`;}
+    if(o.k==='bush')return `<g transform="translate(${x} ${y})">${sh(0,0,1.4)}<circle cx="-.6" cy="-.7" r=".85" fill="#4FB548" stroke="#16296B" stroke-width=".25"/><circle cx=".6" cy="-.8" r=".95" fill="#5CC250" stroke="#16296B" stroke-width=".25"/></g>`;
+    if(o.k==='flower'){const c=['#F2603F','#FFC52E','#FFFFFF','#E86BB0'][Math.floor(o.v*4)];return `<g transform="translate(${x} ${y})"><circle r=".42" cx="-.5" fill="${c}"/><circle r=".42" cx=".4" cy="-.3" fill="${c}"/><circle r=".42" cy=".4" fill="${c}"/></g>`;}
+    if(o.k==='pond')return `<g transform="translate(${x} ${y})"><ellipse rx="5.2" ry="2.8" fill="#6EC6F2" stroke="#16296B" stroke-width=".4"/><ellipse rx="3" ry="1" cx="-1" cy="-.7" fill="#B7E6FF"/><circle cx="3.6" cy="-1.6" r=".7" fill="#5CC250"/></g>`;
+    if(o.k==='house'){const w=['#FFF3D6','#FFE0E0','#E3F1FF','#FFF0B8'][Math.floor(o.v*4)],r=['#E5483B','#2E86F0','#8A5A3B','#7A55D9'][Math.floor(o.v*13)%4];
+      return `<g transform="translate(${x} ${y})">${sh(0,.2,4)}<rect x="-3.2" y="-4.2" width="6.4" height="4.2" fill="${w}" stroke="#16296B" stroke-width=".35"/><path d="M-3.9 -4.1L0 -7.4L3.9 -4.1Z" fill="${r}" stroke="#16296B" stroke-width=".35" stroke-linejoin="round"/><rect x="-.7" y="-2.4" width="1.4" height="2.4" fill="#8A5A3B"/><rect x="-2.6" y="-3.4" width="1.3" height="1.2" fill="#BDE6FF" stroke="#16296B" stroke-width=".2"/><rect x="1.3" y="-3.4" width="1.3" height="1.2" fill="#BDE6FF" stroke="#16296B" stroke-width=".2"/></g>`;}
+    if(o.k==='light')return `<g class="tl" transform="translate(${x} ${y})">${sh(0,0,.9)}<rect x="-.2" y="-6" width=".4" height="6" fill="#3C4C85"/><rect x="-.85" y="-8.9" width="1.7" height="3.4" rx=".45" fill="#2B3354" stroke="#16296B" stroke-width=".25"/><circle cy="-8.2" r=".42" fill="#FF5A4A"/><circle cy="-7.2" r=".42" fill="#7A6A2A"/><circle cy="-6.2" r=".42" fill="#3E5A3E"/></g>`;
+    return `<g transform="translate(${x} ${y})">${sh(0,0,.7)}<rect x="-.16" y="-5.2" width=".32" height="5.2" fill="#3C4C85"/><path d="M0 -5.1h1.3" stroke="#3C4C85" stroke-width=".32"/><circle cx="1.4" cy="-4.8" r=".6" fill="#FFE070" stroke="#16296B" stroke-width=".2"/></g>`;
+  }).join('');
+}
+// traffic lights blink through red, yellow and green
+let tlT=0;function runLights(){clearInterval(tlT);let ph=0;const cols=[['#FF5A4A','#7A6A2A','#3E5A3E'],['#5A2A2A','#7A6A2A','#4BE36A'],['#5A2A2A','#FFD23F','#3E5A3E']];
+  tlT=setInterval(()=>{ph=(ph+1)%3;$$('#board g.tl').forEach(g=>{const c=g.querySelectorAll('circle');cols[ph].forEach((v,i)=>c[i].setAttribute('fill',v));});},1800);}
+function heading(pos){const a=Math.min(pos,11),p=npos(a),q=npos(a+1);return Math.round(Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI);}
+const carTop=(c,d)=>`<svg viewBox="0 0 64 36" aria-hidden="true">
+<rect x="9" y="1" width="13" height="7" rx="2.5" fill="#16296B"/><rect x="42" y="1" width="13" height="7" rx="2.5" fill="#16296B"/><rect x="9" y="28" width="13" height="7" rx="2.5" fill="#16296B"/><rect x="42" y="28" width="13" height="7" rx="2.5" fill="#16296B"/>
+<rect x="2" y="4.5" width="60" height="27" rx="11" fill="${c}" stroke="#16296B" stroke-width="2.6"/>
+<path d="M38 9.5h6.5c2.5 3 2.5 14 0 17H38Z" fill="#BDE6FF" stroke="#16296B" stroke-width="2"/>
+<path d="M11 10.5h4.5v15H11c-1.6-3-1.6-12 0-15Z" fill="#BDE6FF" stroke="#16296B" stroke-width="2"/>
+<rect x="17.5" y="9" width="19" height="18" rx="4" fill="${d}" stroke="#16296B" stroke-width="2"/>
+<rect x="20" y="11.5" width="14" height="4" rx="2" fill="#fff" opacity=".35"/>
+<circle cx="58" cy="10" r="2.6" fill="#FFE070" stroke="#16296B" stroke-width="1.4"/><circle cx="58" cy="26" r="2.6" fill="#FFE070" stroke="#16296B" stroke-width="1.4"/>
+<rect x="2.6" y="9" width="2.4" height="5" rx="1" fill="#F2603F"/><rect x="2.6" y="22" width="2.4" height="5" rx="1" fill="#F2603F"/></svg>`;
+const carSide=(c,d)=>`<svg viewBox="0 0 120 70" aria-hidden="true">
+<ellipse cx="60" cy="64" rx="52" ry="5" fill="#16296B" opacity=".18"/>
+<path d="M8 50V38c0-5 3-8 8-9l16-3 14-15c3-3 6-4 10-4h26c4 0 7 2 10 5l12 14 8 2c5 1 8 5 8 10v12c0 3-2 5-5 5H13c-3 0-5-2-5-5Z" fill="${c}" stroke="#16296B" stroke-width="3.4" stroke-linejoin="round"/>
+<path d="M38 26l11-11c2-2 4-3 7-3h10v14Z" fill="#BDE6FF" stroke="#16296B" stroke-width="2.8" stroke-linejoin="round"/>
+<path d="M71 12h10c3 0 5 1 7 3l10 11H71Z" fill="#BDE6FF" stroke="#16296B" stroke-width="2.8" stroke-linejoin="round"/>
+<path d="M16 36h96" stroke="${d}" stroke-width="3" stroke-linecap="round"/>
+<rect x="104" y="33" width="9" height="6" rx="2" fill="#FFE070" stroke="#16296B" stroke-width="2"/>
+<circle cx="32" cy="54" r="11" fill="#2B3354" stroke="#16296B" stroke-width="3"/><circle cx="32" cy="54" r="4.5" fill="#E6E9F5"/>
+<circle cx="90" cy="54" r="11" fill="#2B3354" stroke="#16296B" stroke-width="3"/><circle cx="90" cy="54" r="4.5" fill="#E6E9F5"/></svg>`;
+function buildBoard(){
+  const b=$('#board');
+  const pts=NODES.map((_,i)=>{const p=npos(i);return p.x+','+p.y}).join(' ');
+  const pl=(st,w,extra)=>`<polyline points="${pts}" fill="none" stroke="${st}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${extra||''}/>`;
+  // zebra crossings on the straight stretch just before each city
+  let zebra='';
+  NODES.forEach((nd,i)=>{if(nd.t!=='city'||i===0)return;const a=npos(i-1),p=npos(i);if(a.y!==p.y)return;
+    const x0=p.x+(a.x>p.x?9:-11);for(let s=0;s<4;s++)zebra+=`<rect x="${x0+s*.55*1.8}" y="${p.y-3.6}" width=".55" height="7.2" fill="#fff" opacity=".92"/>`;});
+  b.innerHTML=`<svg class="road" viewBox="0 0 100 ${BH}" aria-hidden="true">
+    ${pl('#16296B',13.6,'transform="translate(0 1.3)"')}${pl('#16296B',13.6)}${pl('#D8DCEA',12.2)}${pl('#16296B',10)}${pl('#454E6B',9.3)}
+    ${pl('#F4F6FF',8.1)}${pl('#454E6B',7.5)}${pl('#FFD23F',.6,'stroke-dasharray="2.2 1.8"')}${zebra}<g class="scn">${scenery()}</g></svg>
+  <div id="nodes"></div>
+  <div class="car" id="car0">${carTop(PC[0],PCD[0])}</div><div class="car" id="car1">${carTop(PC[1],PCD[1])}</div>
+  <div class="deckbox"><button class="deck" id="drawBtn" type="button"></button></div>`;
+  $('#drawBtn').onclick=onDraw;
+  renderNodes();runLights();
+}
+const CHECK='<svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function renderNodes(){
+  const el=$('#nodes');if(!el)return;
+  el.innerHTML=NODES.map((nd,i)=>{
+    const p=npos(i);let img='',alt='',tag='',plc='',extra='';
+    if(nd.t==='city'){const c=CITIES[nd.n];img=pic(c.img);alt=c.name;plc=`style="--pl:${c.c}"`;if(DOME[c.img])alt+='" data-dome="1';
+      tag=`<span class="tag ltr" style="--tc:${c.c}">×${nd.n}</span>`;
+      extra=S.players.map((pl,j)=>pl.keys.includes(nd.n)?`<span class="done d${j}" title="${esc(pl.name)}">${CHECK}</span>`:'').join('');}
+    else if(nd.t==='work'){img=pic('barrier');alt='ورشة الصيانة';tag='<span class="tag">ورشة</span>';}
+    else if(nd.t==='start'){img=IMG.start;alt='البداية';}
+    else {img=IMG.castle;alt='قلعة أبطال الضرب';tag='<span class="tag">القلعة</span>';}
+    return `<div class="node ${nd.t}" style="left:${p.x}%;top:${pctY(p.y)}%;z-index:${2+Math.floor(i/4)}"><div class="plat" ${plc}></div><img class="bld" src="${img}" alt="${alt}">${tag}${extra}</div>`;
+  }).join('');
+}
+function placeCars(){
+  S.players.forEach((p,i)=>{
+    const el=$('#car'+i);if(!el)return;
+    const pt=npos(p.pos),h=p.hd!=null?p.hd:heading(p.pos);
+    const side=i===0?-1:1,rad=h*Math.PI/180;
+    // park both cars on the near lane, in front of the station, one behind the other
+    const vert=Math.abs(Math.sin(rad))>.5;
+    const ox=vert?side*2.4:Math.cos(rad)*side*4, oy=vert?2.2:2.1;
+    el.style.setProperty('--x',pt.x+ox);el.style.setProperty('--y',pctY(pt.y+oy));el.style.setProperty('--r',h+'deg');
+    el.classList.toggle('active',!S.over&&S.turn===i);
+  });
+}
+async function movePawn(p,to){
+  while(p.pos<to){
+    p.hd=heading(p.pos);placeCars();await sleep(200);
+    p.pos++;placeCars();renderPlayers();sfx.step();await sleep(700);
+  }
+  p.hd=null;placeCars();
+}
+
+/* ---------- players panel ---------- */
+function renderPlayers(){
+  $('#players').innerHTML=S.players.map((p,i)=>{
+    const nd=NODES[p.pos];
+    const where=nd.t==='city'?`المدينة: <span class="ltr">×${nd.n}</span> · ${CITIES[nd.n].name}`:nd.t==='work'?'في ورشة الصيانة':nd.t==='castle'?'وصل إلى القلعة!':'عند نقطة البداية';
+    const act=!S.over&&S.turn===i;
+    const me=OL.on&&OL.seat===i?'<span class="metag">أنت</span>':'';
+    return `<div class="pcard ${act?'active':''}" style="--pc:${PC[i]}"><div class="av" aria-label="${CARNAME[i]}">${carSide(PC[i],PCD[i])}</div>
+      <div class="pinfo"><div class="pname">${esc(p.name)}${me}${act?'<span class="turntag">دوره</span>':''}</div>
+      <div class="pwhere">${where}</div>
+      <div class="starrow" aria-label="نجوم المدينة: ${Math.min(p.stars,5)} من 5">${stars(Math.min(p.stars,5),5)}</div>
+      <div class="keys" aria-label="المفاتيح">${[2,3,4,5,6,7,8,9].map(n=>`<img class="${p.keys.includes(n)?'on':''}" src="${IMG[CITIES[n].key]}" alt="">`).join('')}</div>
+      <div class="ptotal">مجموع النجوم: ${p.total}</div></div></div>`;
+  }).join('');
+}
+function renderDeck(){
+  const b=$('#drawBtn');if(!b)return;
+  const p=S.players[S.turn],nd=NODES[p.pos],my=mine();
+  b.style.setProperty('--dc',PC[S.turn]);
+  b.disabled=S.busy||S.over||!my;
+  b.classList.toggle('pulse',!b.disabled);
+  const lbl=nd.t==='city'?`<span class="ltr">×${nd.n}</span>`:'';
+  b.innerHTML=my?`اسحب بطاقة${lbl?' '+lbl:''}<small>${OL.on?'دورك يا '+esc(p.name):'دور '+esc(p.name)}</small>`:`دور ${esc(p.name)}<small>انتظر حتى ينهي دوره</small>`;
+}
+function renderAll(){renderNodes();placeCars();renderPlayers();renderDeck();}
+
+/* ---------- online ---------- */
+const OL={on:false,code:'',seat:0,ref:null,unsub:null,rev:0,round:0,waiting:false,q:Promise.resolve(),apply:Promise.resolve()};
+let MYID='';
+try{MYID=localStorage.getItem('mtc-id')||'';if(!MYID){MYID=Math.random().toString(36).slice(2,12);localStorage.setItem('mtc-id',MYID);}}catch(e){MYID=Math.random().toString(36).slice(2,12);}
+const dbP=(window.claude&&typeof window.claude.use==='function')?Promise.resolve(window.claude.use('db')).catch(()=>null):Promise.resolve(null);
+const mine=()=>!OL.on||S.turn===OL.seat;
+function stateBody(ev){
+  return{v:1,status:S.over?'over':'play',round:OL.round,rev:OL.rev,adv:S.adv,turn:S.turn,endAfter:S.endAfter,
+    players:S.players.map(p=>({name:p.name,id:p.id||'',pos:p.pos,stars:p.stars,total:p.total,keys:p.keys.slice()})),ev:ev||null,at:Date.now()};
+}
+function sync(ev){
+  if(!OL.on||!OL.ref)return;
+  OL.rev++;const body=stateBody(ev),ref=OL.ref;
+  OL.q=OL.q.then(()=>ref.set(body)).catch(()=>showFeed('تعذّر إرسال الحركة. تأكد من الاتصال بالإنترنت.','bad'));
+}
+function saveSession(){try{localStorage.setItem('mtc-online',JSON.stringify({code:OL.code,seat:OL.seat}));}catch(e){}}
+function clearSession(){try{localStorage.removeItem('mtc-online');}catch(e){}}
+function loadSession(){try{return JSON.parse(localStorage.getItem('mtc-online')||'null');}catch(e){return null;}}
+function leaveOnline(){
+  if(OL.unsub){try{OL.unsub();}catch(e){}}
+  OL.on=false;OL.ref=null;OL.unsub=null;OL.waiting=false;
+  $('#olBadge').hidden=true;$('#lobbyOv').hidden=true;
+}
+function subscribe(){
+  if(OL.unsub){try{OL.unsub();}catch(e){}}
+  OL.unsub=OL.ref.onSnapshot(onRemote,()=>showFeed('انقطع الاتصال باللعبة. أعد فتح الصفحة واضغط «العودة إلى لعبتي».','bad'));
+}
+function onRemote(snap){
+  if(!OL.on||!snap||!snap.exists)return;
+  const d=snap.data();if(!d||!Array.isArray(d.players))return;
+  if(OL.waiting){
+    if(d.status!=='wait'&&d.players[1]&&d.players[1].id){
+      OL.waiting=false;$('#lobbyOv').hidden=true;OL.rev=d.rev;OL.round=d.round;
+      enterOnline(d);sfx.horn();showFeed(`انضم ${d.players[1].name}! أنت تبدأ، اسحب بطاقة`,'turn');
+    }
+    return;
+  }
+  if((d.round||0)!==OL.round){OL.round=d.round;OL.rev=d.rev;enterOnline(d);showFeed('بدأت جولة جديدة','info');return;}
+  if(d.rev<=OL.rev)return;
+  OL.rev=d.rev;
+  OL.apply=OL.apply.then(()=>applyRemote(d)).catch(()=>{});
+}
+async function applyRemote(d){
+  if(d.ev&&d.ev.t){showFeed(d.ev.t,d.ev.k);if(d.ev.k==='ok')sfx.ok();else if(d.ev.k==='bad')sfx.bad();else if(d.ev.k==='key')sfx.key();}
+  for(let i=0;i<2;i++){
+    const p=S.players[i],r=d.players[i];if(!p||!r)continue;
+    p.name=r.name;p.id=r.id;p.keys=r.keys.slice();p.stars=r.stars;p.total=r.total;
+    if(r.pos>p.pos){renderNodes();renderPlayers();await movePawn(p,r.pos);}else p.pos=r.pos;
+  }
+  S.turn=d.turn;S.endAfter=d.endAfter;S.adv=!!d.adv;
+  if(d.status==='over'&&!S.over){gameOver(true);return;}
+  renderAll();
+  if(d.status==='play'&&d.turn===OL.seat&&d.ev&&d.ev.k==='turn'){sfx.horn();showFeed('دورك الآن! اسحب بطاقة','turn');}
+}
+function enterOnline(d){
+  S.adv=!!d.adv;S.names=d.players.map(p=>p?p.name:'');
+  S.players=d.players.map((r,i)=>({idx:i,name:r.name,id:r.id,pos:r.pos,stars:r.stars,total:r.total,keys:r.keys.slice(),hd:null}));
+  S.turn=d.turn;S.endAfter=d.endAfter;S.over=false;S.busy=false;S.decks={};S.mdeck=[];
+  $('#endOv').hidden=true;$('#annOv').hidden=true;$('#setup').hidden=true;$('#game').hidden=false;window.scrollTo(0,0);
+  $('#olBadge').hidden=false;$('#olBadge').textContent='رمز اللعبة: '+OL.code;
+  CUTP.then(()=>{buildBoard();renderAll();if(d.status==='over')gameOver(true);});
+}
+function olMsg(t){const m=$('#olMsg');m.textContent=t;m.hidden=!t;}
+async function getDb(){
+  const db=await dbP;
+  if(!db)olMsg('اللعب أونلاين يعمل فقط عند فتح اللعبة من رابطها على Claude وأنت مسجّل الدخول. يمكنك اللعب على نفس الجهاز الآن.');
+  return db;
+}
+function myName(){return $('#n0').value.trim()||'لاعب';}
+async function hostGame(){
+  olMsg('');const db=await getDb();if(!db)return;
+  const hb=$('#hostBtn');hb.disabled=true;
+  try{
+    let code='';
+    for(let t=0;t<6;t++){
+      code=String(rnd(1000,9999));
+      const s=await db.doc('games/'+code).get();
+      if(!s.exists||Date.now()-((s.data()||{}).at||0)>6*3600e3)break;
+    }
+    leaveOnline();
+    OL.on=true;OL.code=code;OL.seat=0;OL.ref=db.doc('games/'+code);OL.rev=1;OL.round=1;OL.waiting=true;
+    await OL.ref.set({v:1,status:'wait',round:1,rev:1,adv:S.adv,turn:0,endAfter:null,
+      players:[{name:myName(),id:MYID,pos:1,stars:0,total:0,keys:[]},null],ev:null,at:Date.now()});
+    saveSession();subscribe();
+    $('#lobbyCode').textContent=code;$('#lobbyOv').hidden=false;
+  }catch(e){leaveOnline();olMsg('تعذّر إنشاء اللعبة. تأكد أن لديك صلاحية التعديل على هذه اللعبة ثم حاول مرة أخرى.');}
+  hb.disabled=false;
+}
+async function joinGame(code,resume){
+  olMsg('');
+  code=String(code||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/\D/g,'');
+  if(code.length!==4){olMsg('اكتب رمز اللعبة المكوّن من 4 أرقام.');return;}
+  const db=await getDb();if(!db)return;
+  try{
+    const ref=db.doc('games/'+code),s=await ref.get();
+    if(!s.exists){olMsg('لا توجد لعبة بهذا الرمز. تأكد من الرمز.');if(resume)clearSession();return;}
+    const d=JSON.parse(JSON.stringify(s.data()));
+    let seat=-1;
+    if(d.players[0]&&d.players[0].id===MYID)seat=0;
+    else if(d.players[1]&&d.players[1].id===MYID)seat=1;
+    else if(d.players[1]&&d.players[1].id){olMsg('هذه اللعبة فيها لاعبان بالفعل.');return;}
+    leaveOnline();
+    OL.on=true;OL.code=code;OL.ref=ref;OL.round=d.round||1;
+    if(seat===-1){
+      seat=1;let nm=myName();if(nm===d.players[0].name)nm+=' 2';
+      d.players[1]={name:nm,id:MYID,pos:1,stars:0,total:0,keys:[]};
+      d.status='play';d.rev=(d.rev||1)+1;d.at=Date.now();d.ev={t:`انضم ${nm} إلى اللعبة`,k:'info'};
+      await ref.set(d);
+    }
+    OL.seat=seat;OL.rev=d.rev;saveSession();subscribe();
+    if(d.status==='wait'){OL.waiting=true;$('#lobbyCode').textContent=code;$('#lobbyOv').hidden=false;return;}
+    enterOnline(d);
+    showFeed(d.turn===seat?'دورك الآن! اسحب بطاقة':`أنت ${CARNAME[seat]}. يبدأ ${d.players[d.turn].name}`,'turn');
+  }catch(e){leaveOnline();olMsg('تعذّر الانضمام. تأكد أن صاحب اللعبة شاركها معك بصلاحية تسمح بالتعديل.');}
+}
+
+/* ---------- game flow ---------- */
+async function onDraw(){
+  if(S.busy||S.over||!mine())return;
+  S.busy=true;renderDeck();
+  const p=S.players[S.turn],nd=NODES[p.pos];
+  const card=nextCard(nd.n);
+  sync({t:`${p.name} يحل بطاقة «${card.title}» في ${CITIES[nd.n].name} (${card.stars} ${card.stars===1?'نجمة':'نجوم'})`,k:'card'});
+  const r=await showCard(card);
+  if(r.ok){p.stars+=card.stars;p.total+=card.stars;renderPlayers();}
+  sync({t:r.ok?`${p.name} أجاب إجابة صحيحة وحصل على ${card.stars===1?'نجمة':card.stars===2?'نجمتين':'3 نجوم'}`:`${p.name} لم يُصب هذه المرة`,k:r.ok?'ok':'bad'});
+  if(r.ok)await sleep(450);
+  if(p.stars>=5)await unlockAndMove(p);
+  await endTurn();
+}
+async function unlockAndMove(p){
+  const n=NODES[p.pos].n,c=CITIES[n];
+  p.keys.push(n);sfx.key();renderNodes();renderPlayers();
+  await announce({img:IMG[c.key],cls:'spin',title:`مفتاح ${c.name}`,text:`جمع ${esc(p.name)} 5 نجوم وحصل على المفتاح. الطريق إلى المحطة التالية صار مفتوحاً!`,btn:'انطلق بالسيارة'});
+  p.stars=0;
+  await movePawn(p,p.pos+1);
+  sync({t:`${p.name} حصل على مفتاح ${c.name} وانطلق بسيارته`,k:'key'});
+  let bonus=false;
+  if(NODES[p.pos].t==='work'){
+    renderPlayers();
+    await announce({img:IMG.workBanner,title:'ورشة الصيانة',text:`وصلت سيارة ${esc(p.name)} إلى ورشة الصيانة! اسحب بطاقة من صندوق التحديات، والنجاح يمنحك نجمة إضافية.`,btn:'اسحب بطاقة'});
+    const r=await showCard(nextM(n));
+    bonus=r.ok;
+    await movePawn(p,p.pos+1);
+    if(bonus){p.stars=1;p.total+=1;}
+    sync({t:bonus?`${p.name} نجح في ورشة الصيانة وحصل على نجمة إضافية`:`${p.name} خرج من ورشة الصيانة`,k:bonus?'ok':'info'});
+  }
+  renderPlayers();
+  if(NODES[p.pos].t==='castle')await reachCastle(p);
+}
+async function reachCastle(p){
+  sfx.win();confetti();
+  const other=S.players[1-p.idx];
+  const first=S.endAfter===null;
+  if(first)S.endAfter=1-p.idx;
+  sync({t:`وصل ${p.name} إلى قلعة أبطال الضرب!`,k:'key'});
+  await announce({img:IMG.castle,title:first?`وصل ${esc(p.name)} إلى قلعة أبطال الضرب!`:`وصل ${esc(p.name)} أيضاً إلى القلعة!`,text:first?`يحصل ${esc(other.name)} على دورة أخيرة، ثم تُحسب النتيجة حسب التقدم والنجوم.`:'انتهت الرحلة للاعبين معاً.',btn:'متابعة'});
+}
+async function endTurn(){
+  if(S.endAfter===S.turn){return gameOver(false);}
+  S.turn=1-S.turn;S.busy=false;renderAll();
+  sync({t:`انتهى الدور. الآن دور ${S.players[S.turn].name}`,k:'turn'});
+}
+function rank(){
+  const [a,b]=S.players;
+  if(a.pos!==b.pos)return a.pos>b.pos?0:1;
+  if(a.total!==b.total)return a.total>b.total?0:1;
+  return -1;
+}
+function gameOver(remote){
+  S.over=true;S.busy=true;renderAll();
+  if(!remote)sync({t:'انتهت اللعبة',k:'over'});
+  const w=rank();
+  sfx.win();confetti();
+  const medalFor=(p,i)=>{
+    if(w===-1||w===i)return{img:IMG.gold,t:'بطل جدول الضرب'};
+    return p.keys.length>=4?{img:IMG.silver,t:'خبير جدول الضرب'}:{img:IMG.bronze,t:'مستكشف جدول الضرب'};
+  };
+  const head=w===-1?'تعادل! بطلان معاً':`الفائز: ${esc(S.players[w].name)}`;
+  $('#endBox').innerHTML=`<h3>${head}</h3><div class="results">${S.players.map((p,i)=>{const m=medalFor(p,i);return `<div class="rcard ${(w===-1||w===i)?'win':''}"><img class="medal" src="${m.img}" alt=""><b>${esc(p.name)}</b><small>${m.t}</small><small>${p.keys.length} من 8 مفاتيح${p.pos===12?' · وصل إلى القلعة':''}</small><small>مجموع النجوم: ${p.total}</small></div>`}).join('')}</div>
+  <div class="row-c"><button class="btn green" id="again" type="button">العب مرة أخرى</button><button class="btn alt" id="toSetup" type="button">${OL.on?'الخروج من اللعبة':'تغيير الإعدادات'}</button></div>`;
+  $('#endOv').hidden=false;
+  $('#again').onclick=()=>{$('#endOv').hidden=true;OL.on?newOnlineRound():startGame();};
+  $('#toSetup').onclick=()=>{$('#endOv').hidden=true;if(OL.on){leaveOnline();clearSession();}showSetup();};
+}
+function newOnlineRound(){
+  OL.round++;OL.rev++;
+  const d={v:1,status:'play',round:OL.round,rev:OL.rev,adv:S.adv,turn:0,endAfter:null,
+    players:S.players.map(p=>({name:p.name,id:p.id||'',pos:1,stars:0,total:0,keys:[]})),ev:{t:'بدأت جولة جديدة',k:'info'},at:Date.now()};
+  const ref=OL.ref;OL.q=OL.q.then(()=>ref.set(d)).catch(()=>{});
+  enterOnline(d);
+}
+async function startGame(){
+  leaveOnline();
+  S.players=[0,1].map(i=>({idx:i,name:S.names[i],pos:0,stars:0,total:0,keys:[],hd:null}));
+  S.turn=0;S.decks={};S.mdeck=[];S.endAfter=null;S.over=false;S.busy=true;
+  $('#setup').hidden=true;$('#game').hidden=false;window.scrollTo(0,0);
+  await CUTP;
+  buildBoard();renderAll();
+  await sleep(500);
+  for(const p of S.players){p.hd=heading(0);}
+  placeCars();await sleep(150);
+  for(const p of S.players){p.pos=1;}
+  placeCars();renderPlayers();sfx.step();
+  await sleep(900);
+  for(const p of S.players){p.hd=null;}
+  S.busy=false;renderAll();
+}
+function showSetup(){$('#game').hidden=true;$('#setup').hidden=false;window.scrollTo(0,0);refreshResume();}
+
+/* ---------- rules ---------- */
+$('#rulesBody').innerHTML=[
+['فكرة اللعبة','لعبة تعليمية تفاعلية لمراجعة وحفظ جداول الضرب بطريقة ممتعة من خلال رحلة بالسيارة بين المدن والتحديات.'],
+['عدد اللاعبين','لاعبان: السيارة الزرقاء والسيارة الخضراء. يمكن اللعب على الجهاز نفسه بالتناوب، أو أونلاين كل لاعب من جهازه.'],
+['اللعب أونلاين','ينشئ أحد اللاعبين لعبة فيظهر له رمز من 4 أرقام، ويكتبه الآخر في «انضم». يرى كل لاعب حركة سيارة صديقه ونتائجه مباشرة.'],
+['مسار اللعبة','تسير السيارتان على الشارع عبر 8 مدن تمثل جداول الضرب من 2 إلى 9، وفي نهاية الطريق توجد قلعة أبطال الضرب.'],
+['بطاقات المدن','في كل مدينة 15 بطاقة سؤال. للبطاقات ثلاثة مستويات: نجمة واحدة (سهلة)، نجمتان (متوسطة)، ثلاث نجوم (صعبة). وتتنوع التحديات بين: تحدي السرعة، لغز، أكمل الجدول، أكمل الفراغ.'],
+['نظام النجوم','عند الإجابة الصحيحة يحصل اللاعب على النجوم الموجودة على البطاقة. يحتاج إلى 5 نجوم ليحصل على مفتاح المدينة وتنطلق سيارته إلى المحطة التالية. عند الوصول إلى مدينة جديدة يبدأ عدّ النجوم من جديد.'],
+['نظام الأدوار','كل دور بطاقة واحدة فقط. بعد الإجابة ينتهي الدور وينتقل اللعب إلى اللاعب الآخر، حتى لو كانت البطاقة سهلة.'],
+['ورشة الصيانة','توجد 3 محطات ورشة صيانة على الطريق. عند وصول السيارة إليها يسحب اللاعب بطاقة من صندوق يحتوي على 6 تحديات إضافية. إذا نجح يحصل على نجمة إضافية تُحسب له في المدينة التالية.'],
+['الساعة الرملية','تُستخدم مع تحديات السرعة (وتحديات الصيانة المؤقتة) لتحديد الوقت المسموح للإجابة.'],
+['نهاية اللعبة','عند وصول أحد اللاعبين إلى قلعة أبطال الضرب يحصل اللاعب الآخر على دورة أخيرة، ثم تُحدد النتيجة حسب التقدم والنجوم.']
+].map(([h,t])=>`<div class="rbox"><h4>${h}</h4><p>${t}</p></div>`).join('');
+const openRules=()=>{$('#rulesOv').hidden=false;};
+$('#rulesBtn').onclick=openRules;$('#rulesBtn0').onclick=openRules;
+$('#rulesClose').onclick=()=>{$('#rulesOv').hidden=true;};
+
+/* ---------- setup wiring ---------- */
+$('#heroCastle').src=IMG.castle;
+$('#typeChips').innerHTML=['speed','riddle','complete','fill'].map(t=>`<span class="chip" style="background:${TYPES[t].c}">${ICON[t]}${TYPES[t].t}</span>`).join('');
+function setLevel(a){S.adv=a;$('#lv0').setAttribute('aria-pressed',String(!a));$('#lv1').setAttribute('aria-pressed',String(a));}
+$('#lv0').onclick=()=>setLevel(false);$('#lv1').onclick=()=>setLevel(true);
+let MODE='local';
+function setMode(m){
+  MODE=m;const on=m==='online';
+  $('#mdLocal').setAttribute('aria-pressed',String(!on));$('#mdOnline').setAttribute('aria-pressed',String(on));
+  $('#n1box').hidden=on;$('#whoH').textContent=on?'ما اسمك؟':'من سيلعب؟';$('#n0lab').textContent=on?'اسمك':'اللاعب الأول (السيارة الزرقاء)';
+  $('#onlineBox').hidden=!on;$('#startBtn').hidden=on;$('#lvNote').hidden=!on;olMsg('');
+  try{localStorage.setItem('mtc-mode',m);}catch(e){}
+  refreshResume();
+}
+function refreshResume(){const s=loadSession();$('#resumeRow').hidden=!(s&&s.code&&MODE==='online');if(s&&s.code)$('#resumeBtn').textContent='العودة إلى لعبتي (الرمز '+s.code+')';}
+$('#mdLocal').onclick=()=>setMode('local');$('#mdOnline').onclick=()=>setMode('online');
+$('#hostBtn').onclick=hostGame;
+$('#joinBtn').onclick=()=>joinGame($('#joinCode').value,false);
+$('#joinCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();joinGame($('#joinCode').value,false);}});
+$('#resumeBtn').onclick=()=>{const s=loadSession();if(s)joinGame(s.code,true);};
+$('#lobbyCancel').onclick=()=>{leaveOnline();clearSession();refreshResume();};
+try{const sv=JSON.parse(localStorage.getItem('mtc-names')||'null');if(sv){$('#n0').value=sv[0]||$('#n0').value;$('#n1').value=sv[1]||$('#n1').value;}}catch(e){}
+const saveNames=()=>{try{localStorage.setItem('mtc-names',JSON.stringify([$('#n0').value.trim(),$('#n1').value.trim()]));}catch(e){}};
+$('#n0').addEventListener('change',saveNames);$('#n1').addEventListener('change',saveNames);
+$('#startBtn').onclick=()=>{
+  S.names=[$('#n0').value.trim()||'اللاعب الأول',$('#n1').value.trim()||'اللاعب الثاني'];
+  if(S.names[0]===S.names[1])S.names[1]+=' 2';
+  saveNames();
+  startGame();
+};
+$('#soundBtn').onclick=()=>{S.sound=!S.sound;$('#soundBtn').setAttribute('aria-pressed',String(S.sound));$('#soundBtn').textContent=S.sound?'الصوت: يعمل':'الصوت: متوقف';};
+let rt=0;
+$('#restartBtn').onclick=()=>{
+  const b=$('#restartBtn');
+  if(rt){clearTimeout(rt);rt=0;b.textContent='لعبة جديدة';if(OL.on){leaveOnline();clearSession();}showSetup();return;}
+  b.textContent='اضغط للتأكيد';rt=setTimeout(()=>{rt=0;b.textContent='لعبة جديدة';},3000);
+};
+try{if(localStorage.getItem('mtc-mode')==='online')setMode('online');}catch(e){}
+refreshResume();
+})();
+</script>
