@@ -887,61 +887,95 @@ function leaveOnline(){
   $('#olBadge').hidden=true;$('#lobbyOv').hidden=true;
 }
 
-/* ---------- online outside Claude (e.g. GitHub Pages): a public MQTT relay keeps the game ----------
-   Each game is one retained message on the relay, so it survives a closed page or a phone app switch,
-   and phones on any network can reach it. It offers the same get/set/onSnapshot shape as Claude's store. */
-const RELAYS=['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt'];
+/* ---------- online outside Claude (e.g. GitHub Pages): public MQTT relays keep the game ----------
+   Each game is one retained message, so it survives a closed page or a phone app switch.
+   Every move is written to all the relays this device can reach, and reads take the newest copy,
+   so a phone that reaches only some of them (or only port 443) still finds the game.
+   It offers the same get/set/onSnapshot shape as Claude's store. */
+const RELAYS=[
+  ['wss://broker.hivemq.com:8884/mqtt',{}],
+  ['wss://public.cloud.shiftr.io',{username:'public',password:'public'}],
+  ['wss://broker.emqx.io:8084/mqtt',{}],
+  ['wss://test.mosquitto.org:8081',{}]
+];
 const TOPIC_ROOT='mtc-times-table-city-v1/';
-let MQ=null;
+const MQ={clients:[],ready:null,topics:new Set(),handlers:new Set(),known:{}};
+// a relay that connects late (or reconnects) gets the newest copy we know, unless it already holds a newer one
+function heal(c){
+  Object.keys(MQ.known).forEach(t=>{
+    let theirs=null;
+    const h=(topic,m)=>{if(topic!==t)return;try{const d=m&&m.length?JSON.parse(m.toString()):null;if(d&&newer(d,theirs))theirs=d;}catch(e){}};
+    c.on('message',h);c.subscribe(t,{qos:1});
+    setTimeout(()=>{c.removeListener('message',h);const mine=MQ.known[t];if(mine&&newer(mine,theirs))c.publish(t,JSON.stringify(mine),{qos:1,retain:true});},1500);
+  });
+}
+// newest game copy wins: later round, then later move, then later time
+const ver=d=>[d.round||0,d.rev||0,d.at||0];
+const newer=(a,b)=>{if(!b)return true;const x=ver(a),y=ver(b);for(let i=0;i<3;i++){if(x[i]!==y[i])return x[i]>y[i];}return false;};
 function loadMqttLib(){
   if(window.mqtt)return Promise.resolve(true);
   return new Promise(res=>{const s=document.createElement('script');s.src='https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js';
     s.onload=()=>res(!!window.mqtt);s.onerror=()=>res(false);document.head.appendChild(s);});
 }
-function relayConnect(url){
+function relayConnect([url,opts]){
   return new Promise(res=>{
     let done=false,c;
-    try{c=window.mqtt.connect(url,{clientId:'mtc_'+MYID+'_'+Math.random().toString(36).slice(2,7),clean:true,keepalive:30,reconnectPeriod:2000,connectTimeout:8000});}catch(e){return res(null);}
+    try{c=window.mqtt.connect(url,{clientId:'mtc_'+MYID+'_'+Math.random().toString(36).slice(2,7),clean:true,keepalive:30,reconnectPeriod:3000,connectTimeout:10000,...opts});}catch(e){return res(null);}
     c.on('connect',()=>{if(!done){done=true;res(c);}});
     c.on('error',()=>{});
-    setTimeout(()=>{if(!done){done=true;try{c.end(true);}catch(e){}res(null);}},9000);
+    setTimeout(()=>{if(!done){done=true;try{c.end(true);}catch(e){}res(null);}},11000);
   });
 }
-// one shared connection, made on first use; tries the next relay if the first is down
-function mqttClient(){
-  if(MQ)return MQ;
-  MQ=(async()=>{
-    if(!await loadMqttLib())return null;
-    for(const u of RELAYS){const c=await relayConnect(u);if(c)return c;}
-    return null;
-  })().then(c=>{if(!c)MQ=null;return c;});
-  return MQ;
+// connect to every relay at once; ready as soon as one answers, the others join as they connect
+function mqttReady(){
+  if(MQ.ready)return MQ.ready;
+  MQ.ready=(async()=>{
+    if(!await loadMqttLib())return false;
+    return new Promise(res=>{
+      let left=RELAYS.length,done=false;
+      RELAYS.forEach(r=>relayConnect(r).then(c=>{
+        if(c){
+          MQ.clients.push(c);
+          c.on('message',(t,m)=>MQ.handlers.forEach(h=>{try{h(t,m);}catch(e){}}));
+          MQ.topics.forEach(t=>c.subscribe(t,{qos:1}));
+          heal(c);c.on('connect',()=>heal(c));
+          if(!done){done=true;res(true);}
+        }
+        if(--left===0&&!done){done=true;res(false);}
+      }));
+    });
+  })().then(ok=>{if(!ok)MQ.ready=null;return ok;});
+  return MQ.ready;
 }
 function mqttDb(){return{doc(path){
   const t=TOPIC_ROOT+path;
   const parse=m=>{try{return m&&m.length?JSON.parse(m.toString()):null;}catch(e){return null;}};
+  const watch=t2=>{MQ.topics.add(t2);MQ.clients.forEach(c=>c.subscribe(t2,{qos:1}));};
+  const remember=d=>{if(d&&newer(d,MQ.known[t]))MQ.known[t]=d;};
   return{
-    // the relay replays the retained game right after we subscribe; no reply in time means no game
+    // relays replay the retained game when we subscribe; collect the copies and keep the newest
     get:()=>new Promise(async(res,rej)=>{
-      const c=await mqttClient();if(!c)return rej(new Error('offline'));
-      let done=false;
-      const h=(topic,msg)=>{if(topic!==t||done)return;done=true;c.removeListener('message',h);const d=parse(msg);res({exists:!!d,data:()=>d});};
-      c.on('message',h);c.subscribe(t,{qos:1});
-      setTimeout(()=>{if(!done){done=true;c.removeListener('message',h);res({exists:false,data:()=>undefined});}},1800);
+      if(!await mqttReady())return rej(new Error('offline'));
+      let best=null,answers=0,done=false,soon=0;
+      const finish=()=>{if(done)return;done=true;MQ.handlers.delete(h);clearTimeout(soon);clearTimeout(late);remember(best);res({exists:!!best,data:()=>best});};
+      const h=(topic,msg)=>{if(topic!==t||done)return;answers++;const d=parse(msg);if(d&&newer(d,best))best=d;
+        if(answers>=RELAYS.length)finish();else if(!soon)soon=setTimeout(finish,1500);};
+      MQ.handlers.add(h);watch(t);
+      const late=setTimeout(finish,4000);
     }),
     set:async d=>{
-      const c=await mqttClient();if(!c)throw new Error('offline');
-      await new Promise((ok,bad)=>c.publish(t,JSON.stringify(d),{qos:1,retain:true},e=>e?bad(e):ok()));
+      if(!await mqttReady())throw new Error('offline');
+      const s=JSON.stringify(d);remember(JSON.parse(s));
+      const sends=MQ.clients.map(c=>new Promise((ok,bad)=>c.publish(t,s,{qos:1,retain:true},e=>e?bad(e):ok())));
+      // done when any relay has it; the others finish in the background
+      await new Promise((ok,bad)=>{let fails=0;sends.forEach(p=>p.then(ok,()=>{if(++fails===sends.length)bad(new Error('offline'));}));});
     },
     onSnapshot(next,err){
-      let live=true,h=null,cl=null;
-      mqttClient().then(c=>{
-        if(!live)return;if(!c){if(err)err({code:'unavailable'});return;}
-        cl=c;h=(topic,msg)=>{if(!live||topic!==t)return;const d=parse(msg);if(d)next({exists:true,data:()=>d});};
-        c.on('message',h);c.subscribe(t,{qos:1});
-        // after the phone wakes up the client reconnects and subscribes again, and the relay replays the game
-      });
-      return()=>{live=false;if(cl&&h)cl.removeListener('message',h);};
+      let live=true,last=null;
+      const h=(topic,msg)=>{if(!live||topic!==t)return;const d=parse(msg);if(!d||!newer(d,last))return;last=d;remember(d);next({exists:true,data:()=>d});};
+      mqttReady().then(ok=>{if(!live)return;if(!ok){if(err)err({code:'unavailable'});return;}MQ.handlers.add(h);watch(t);});
+      // a phone that wakes up reconnects and subscribes again, and the relays replay the game
+      return()=>{live=false;MQ.handlers.delete(h);};
     }
   };
 }};}
