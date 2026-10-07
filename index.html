@@ -817,7 +817,118 @@ function loadSession(){try{return JSON.parse(localStorage.getItem('mtc-online')|
 function leaveOnline(){
   if(OL.unsub){try{OL.unsub();}catch(e){}}
   OL.on=false;OL.ref=null;OL.unsub=null;OL.waiting=false;
+  p2pReset();
   $('#olBadge').hidden=true;$('#lobbyOv').hidden=true;
+}
+
+/* ---------- direct browser-to-browser link (PeerJS), used outside Claude, e.g. on GitHub Pages ----------
+   The host's browser keeps the game document; the friend connects with the 4-digit code.
+   It offers the same get/set/onSnapshot shape the game uses with Claude's store. */
+const P2P={peer:null,conn:null,code:'',isHost:false,state:null,subs:[],wait:null};
+const PEER_PREFIX='mtc-times-table-city-';
+function loadPeerLib(){
+  if(window.Peer)return Promise.resolve(true);
+  return new Promise(res=>{const s=document.createElement('script');s.src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
+    s.onload=()=>res(!!window.Peer);s.onerror=()=>res(false);document.head.appendChild(s);});
+}
+const newer=(a,b)=>!b||(a.round||0)>(b.round||0)||((a.round||0)===(b.round||0)&&(a.rev||0)>(b.rev||0));
+function p2pNotify(){const d=P2P.state,snap={exists:!!d,data:()=>d};P2P.subs.slice().forEach(f=>{try{f(snap);}catch(e){}});}
+function p2pSave(){if(P2P.isHost&&P2P.state){try{localStorage.setItem('mtc-p2p-'+P2P.code,JSON.stringify(P2P.state));}catch(e){}}}
+function p2pSend(m){if(P2P.conn&&P2P.conn.open){try{P2P.conn.send(m);}catch(e){}}}
+function p2pWire(conn){
+  P2P.conn=conn;
+  conn.on('data',m=>{
+    if(!m||typeof m!=='object')return;
+    if(m.t==='hello'&&P2P.isHost){p2pSend({t:'state',d:P2P.state});return;}
+    if(m.t==='state'&&m.d&&typeof m.d==='object'){
+      if(newer(m.d,P2P.state)){P2P.state=m.d;p2pSave();p2pNotify();}
+      if(P2P.wait){const w=P2P.wait;P2P.wait=null;w();}
+    }
+  });
+  conn.on('open',()=>{if(P2P.conn!==conn)return;if(P2P.isHost)p2pSend({t:'state',d:P2P.state});else p2pSend({t:'hello'});if(OL.on&&!OL.waiting)showFeed('تم الاتصال بصديقك','info');});
+  conn.on('close',()=>{
+    if(P2P.conn!==conn)return;P2P.conn=null;
+    if(OL.on)showFeed(P2P.isHost?'انقطع اتصال صديقك. سيعود تلقائياً عندما يفتح اللعبة من جديد.':'انقطع الاتصال بصاحب اللعبة، نحاول إعادة الاتصال…','bad');
+    if(!P2P.isHost)setTimeout(p2pReconnect,2500);
+  });
+  conn.on('error',()=>{});
+}
+function p2pReconnect(){
+  if(!OL.on||P2P.isHost||!P2P.peer||(P2P.conn&&P2P.conn.open))return;
+  try{if(P2P.peer.disconnected)P2P.peer.reconnect();p2pWire(P2P.peer.connect(PEER_PREFIX+P2P.code,{reliable:true}));}catch(e){}
+  setTimeout(()=>{if(OL.on&&!P2P.isHost&&!(P2P.conn&&P2P.conn.open)){P2P.conn=null;p2pReconnect();}},6000);
+}
+function p2pReset(){
+  try{if(P2P.conn)P2P.conn.close();}catch(e){}
+  try{if(P2P.peer)P2P.peer.destroy();}catch(e){}
+  Object.assign(P2P,{peer:null,conn:null,state:null,subs:[],wait:null,isHost:false,code:''});
+}
+function p2pRef(){return{
+  get:async()=>({exists:!!P2P.state,data:()=>P2P.state}),
+  set:async d=>{P2P.state=JSON.parse(JSON.stringify(d));p2pSave();p2pSend({t:'state',d:P2P.state});p2pNotify();},
+  onSnapshot:f=>{P2P.subs.push(f);setTimeout(()=>{if(P2P.subs.includes(f))f({exists:!!P2P.state,data:()=>P2P.state});},0);return()=>{P2P.subs=P2P.subs.filter(x=>x!==f);};}
+};}
+// claim the code on the PeerJS server: true, 'taken', or false (no connection)
+function p2pHost(code){
+  return new Promise(res=>{
+    let done=false;const peer=new Peer(PEER_PREFIX+code,{debug:0});
+    const fin=v=>{if(done)return;done=true;if(v!==true){try{peer.destroy();}catch(e){}}res(v);};
+    peer.on('open',()=>{P2P.peer=peer;fin(true);});
+    peer.on('connection',c=>{if(P2P.peer!==peer)return;if(P2P.conn&&P2P.conn!==c){const old=P2P.conn;P2P.conn=null;try{old.close();}catch(e){}}p2pWire(c);});
+    peer.on('disconnected',()=>{if(P2P.peer===peer){try{peer.reconnect();}catch(e){}}});
+    peer.on('error',e=>fin(e&&e.type==='unavailable-id'?'taken':false));
+    setTimeout(()=>fin(false),12000);
+  });
+}
+// reach the host and wait for the game document: the document, null (no such game) or false (no connection)
+function p2pJoin(code){
+  return new Promise(res=>{
+    let done=false;const peer=new Peer({debug:0});P2P.peer=peer;
+    const fin=v=>{if(done)return;done=true;res(v);};
+    peer.on('open',()=>{P2P.wait=()=>fin(P2P.state);p2pWire(peer.connect(PEER_PREFIX+code,{reliable:true}));});
+    peer.on('disconnected',()=>{if(P2P.peer===peer&&OL.on){try{peer.reconnect();}catch(e){}}});
+    peer.on('error',e=>{if(!done)fin(e&&e.type==='peer-unavailable'?null:false);});
+    setTimeout(()=>fin(P2P.state||null),15000);
+  });
+}
+async function hostP2P(){
+  const hb=$('#hostBtn');hb.disabled=true;olMsg('جارٍ تجهيز اللعبة…');
+  if(!await loadPeerLib()){olMsg('تعذّر تحميل خدمة اللعب أونلاين. تأكد من الاتصال بالإنترنت.');hb.disabled=false;return;}
+  leaveOnline();
+  let code='',ok=false;
+  for(let t=0;t<5;t++){code=String(rnd(1000,9999));ok=await p2pHost(code);if(ok!=='taken')break;}
+  hb.disabled=false;
+  if(ok!==true){olMsg('تعذّر إنشاء اللعبة أونلاين الآن. تأكد من الاتصال بالإنترنت وحاول مرة أخرى.');return;}
+  olMsg('');P2P.isHost=true;P2P.code=code;
+  OL.on=true;OL.code=code;OL.seat=0;OL.ref=p2pRef();OL.rev=1;OL.round=1;OL.waiting=true;
+  await OL.ref.set({v:1,status:'wait',round:1,rev:1,adv:S.adv,turn:0,endAfter:null,
+    players:[{name:myName(),id:MYID,pos:1,stars:0,total:0,keys:[]},null],ev:null,at:Date.now()});
+  saveSession();subscribe();
+  $('#lobbyCode').textContent=code;$('#lobbyOv').hidden=false;
+}
+// returns {ref,d} to continue joining, or null when it handled everything (or failed with a message)
+async function connectP2P(code,resume){
+  if(!await loadPeerLib()){olMsg('تعذّر تحميل خدمة اللعب أونلاين. تأكد من الاتصال بالإنترنت.');return null;}
+  const sess=loadSession();let saved=null;
+  try{saved=JSON.parse(localStorage.getItem('mtc-p2p-'+code)||'null');}catch(e){}
+  leaveOnline();
+  if(resume&&sess&&sess.code===code&&sess.seat===0&&saved){
+    // the host reopened the page: claim the same code again and carry on from the saved game
+    olMsg('جارٍ إعادة فتح اللعبة…');let ok=false;
+    for(let t=0;t<6;t++){ok=await p2pHost(code);if(ok===true)break;await sleep(3000);}
+    if(ok!==true){olMsg('تعذّر إعادة فتح اللعبة الآن. حاول بعد قليل.');return null;}
+    olMsg('');P2P.isHost=true;P2P.code=code;P2P.state=saved;
+    OL.on=true;OL.code=code;OL.seat=0;OL.ref=p2pRef();OL.round=saved.round||1;OL.rev=saved.rev||1;
+    saveSession();subscribe();
+    if(saved.status==='wait'){OL.waiting=true;$('#lobbyCode').textContent=code;$('#lobbyOv').hidden=false;return null;}
+    enterOnline(saved);showFeed('عدت إلى لعبتك. ينضم صديقك تلقائياً عندما يفتح اللعبة.','info');
+    return null;
+  }
+  olMsg('جارٍ الاتصال بلعبة صديقك…');P2P.isHost=false;P2P.code=code;
+  const d=await p2pJoin(code);
+  if(!d){leaveOnline();olMsg(d===null?'لم نجد لعبة مفتوحة بهذا الرمز. تأكد من الرمز، ومن أن صفحة صديقك ما زالت مفتوحة.':'تعذّر الاتصال. تأكد من الاتصال بالإنترنت وحاول مرة أخرى.');if(resume&&d===null)clearSession();return null;}
+  olMsg('');P2P.code=code;
+  return{ref:p2pRef(),d:JSON.parse(JSON.stringify(d))};
 }
 function subscribe(){
   if(OL.unsub){try{OL.unsub();}catch(e){}}
@@ -859,14 +970,9 @@ function enterOnline(d){
   CUTP.then(()=>{buildBoard();renderAll();if(d.status==='over')gameOver(true);});
 }
 function olMsg(t){const m=$('#olMsg');m.textContent=t;m.hidden=!t;}
-async function getDb(){
-  const db=await dbP;
-  if(!db)olMsg('اللعب أونلاين يعمل فقط عند فتح اللعبة من رابطها على Claude وأنت مسجّل الدخول. يمكنك اللعب على نفس الجهاز الآن.');
-  return db;
-}
 function myName(){return $('#n0').value.trim()||'لاعب';}
 async function hostGame(){
-  olMsg('');const db=await getDb();if(!db)return;
+  olMsg('');const db=await dbP;if(!db)return hostP2P();
   const hb=$('#hostBtn');hb.disabled=true;
   try{
     let code='';
@@ -888,16 +994,22 @@ async function joinGame(code,resume){
   olMsg('');
   code=String(code||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/\D/g,'');
   if(code.length!==4){olMsg('اكتب رمز اللعبة المكوّن من 4 أرقام.');return;}
-  const db=await getDb();if(!db)return;
+  const db=await dbP;
   try{
-    const ref=db.doc('games/'+code),s=await ref.get();
-    if(!s.exists){olMsg('لا توجد لعبة بهذا الرمز. تأكد من الرمز.');if(resume)clearSession();return;}
-    const d=JSON.parse(JSON.stringify(s.data()));
+    let ref,d;
+    if(db){
+      ref=db.doc('games/'+code);const s=await ref.get();
+      if(!s.exists){olMsg('لا توجد لعبة بهذا الرمز. تأكد من الرمز.');if(resume)clearSession();return;}
+      d=JSON.parse(JSON.stringify(s.data()));
+    }else{
+      const r=await connectP2P(code,resume);if(!r)return;
+      ref=r.ref;d=r.d;
+    }
     let seat=-1;
     if(d.players[0]&&d.players[0].id===MYID)seat=0;
     else if(d.players[1]&&d.players[1].id===MYID)seat=1;
-    else if(d.players[1]&&d.players[1].id){olMsg('هذه اللعبة فيها لاعبان بالفعل.');return;}
-    leaveOnline();
+    else if(d.players[1]&&d.players[1].id){if(!db)leaveOnline();olMsg('هذه اللعبة فيها لاعبان بالفعل.');return;}
+    if(db)leaveOnline();
     OL.on=true;OL.code=code;OL.ref=ref;OL.round=d.round||1;
     if(seat===-1){
       seat=1;let nm=myName();if(nm===d.players[0].name)nm+=' 2';
@@ -909,7 +1021,7 @@ async function joinGame(code,resume){
     if(d.status==='wait'){OL.waiting=true;$('#lobbyCode').textContent=code;$('#lobbyOv').hidden=false;return;}
     enterOnline(d);
     showFeed(d.turn===seat?'دورك الآن! اسحب بطاقة':`أنت ${CARNAME[seat]}. يبدأ ${d.players[d.turn].name}`,'turn');
-  }catch(e){leaveOnline();olMsg('تعذّر الانضمام. تأكد أن صاحب اللعبة شاركها معك بصلاحية تسمح بالتعديل.');}
+  }catch(e){leaveOnline();olMsg(db?'تعذّر الانضمام. تأكد أن صاحب اللعبة شاركها معك بصلاحية تسمح بالتعديل.':'تعذّر الانضمام. حاول مرة أخرى.');}
 }
 
 /* ---------- game flow ---------- */
@@ -1010,7 +1122,7 @@ function showSetup(){$('#game').hidden=true;$('#setup').hidden=false;window.scro
 $('#rulesBody').innerHTML=[
 ['فكرة اللعبة','لعبة تعليمية تفاعلية لمراجعة وحفظ جداول الضرب بطريقة ممتعة من خلال رحلة بالسيارة بين المدن والتحديات.'],
 ['عدد اللاعبين','لاعبان: السيارة الزرقاء والسيارة الخضراء. يمكن اللعب على الجهاز نفسه بالتناوب، أو أونلاين كل لاعب من جهازه.'],
-['اللعب أونلاين','ينشئ أحد اللاعبين لعبة فيظهر له رمز من 4 أرقام، ويكتبه الآخر في «انضم». يرى كل لاعب حركة سيارة صديقه ونتائجه مباشرة.'],
+['اللعب أونلاين','ينشئ أحد اللاعبين لعبة فيظهر له رمز من 4 أرقام، ويكتبه الآخر في «انضم». يرى كل لاعب حركة سيارة صديقه ونتائجه مباشرة. يجب أن تبقى صفحة من أنشأ اللعبة مفتوحة أثناء اللعب.'],
 ['مسار اللعبة','تسير السيارتان على الشارع عبر 8 مدن تمثل جداول الضرب من 2 إلى 9، وفي نهاية الطريق توجد قلعة أبطال الضرب.'],
 ['بطاقات المدن','في كل مدينة 15 بطاقة سؤال. للبطاقات ثلاثة مستويات: نجمة واحدة (سهلة)، نجمتان (متوسطة)، ثلاث نجوم (صعبة). وتتنوع التحديات بين: تحدي السرعة، لغز، أكمل الجدول، أكمل الفراغ.'],
 ['نظام النجوم','عند الإجابة الصحيحة يحصل اللاعب على النجوم الموجودة على البطاقة. يحتاج إلى 5 نجوم ليحصل على مفتاح المدينة وتنطلق سيارته إلى المحطة التالية. عند الوصول إلى مدينة جديدة يبدأ عدّ النجوم من جديد.'],
