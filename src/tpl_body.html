@@ -78,9 +78,20 @@
   <div class="ov" id="lobbyOv" hidden><div class="box"><div class="card" style="--tc:var(--green)"><div class="ann">
     <h3>رمز لعبتك</h3>
     <div class="bigcode" id="lobbyCode"></div>
-    <p>أرسل هذا الرمز لصديقك. يفتح صديقك رابط اللعبة نفسه، ويختار «أونلاين»، ثم يكتب الرمز ويضغط «انضم».</p>
+    <div class="invite" id="invite" hidden>
+      <p>أرسل هذا الرابط لصديقك، فيدخل اللعبة مباشرة:</p>
+      <div class="invlink" id="invLink" dir="ltr"></div>
+      <div class="row-c"><a class="btn green" id="invWa" target="_blank" rel="noopener">أرسل على واتساب</a><button class="btn alt" id="invCopy" type="button">انسخ الرابط</button></div>
+    </div>
+    <p id="codeHelp">أرسل هذا الرمز لصديقك. يفتح صديقك رابط اللعبة نفسه، ويختار «أونلاين»، ثم يكتب الرمز ويضغط «انضم».</p>
     <p class="waiting">بانتظار انضمام صديقك…</p>
     <button class="btn alt" id="lobbyCancel" type="button">إلغاء</button>
+  </div></div></div></div>
+  <div class="ov" id="inviteOv" hidden><div class="box"><div class="card" style="--tc:var(--green)"><div class="ann">
+    <h3>صديقك يدعوك للعب!</h3>
+    <p>رمز اللعبة <b class="ltr" id="invCodeShow"></b>. اكتب اسمك ثم ادخل.</p>
+    <label class="lab invname" for="invName"><span>اسمك</span><input id="invName" maxlength="14" autocomplete="off"></label>
+    <div class="row-c"><button class="btn green" id="invGo" type="button">ادخل اللعبة</button><button class="btn alt" id="invNo" type="button">ليس الآن</button></div>
   </div></div></div></div>
   <div class="ov" id="rulesOv" hidden><div class="box"><div class="card" style="--tc:var(--blue)">
     <div class="card-h"><div class="htitle">دليل اللعبة</div></div>
@@ -677,7 +688,36 @@ async function hostP2P(){
   await OL.ref.set({v:1,status:'wait',round:1,rev:1,adv:S.adv,turn:0,endAfter:null,
     players:[{name:myName(),id:MYID,pos:1,stars:0,total:0,keys:[]},null],ev:null,at:Date.now()});
   saveSession();subscribe();
-  $('#lobbyCode').textContent=code;$('#lobbyOv').hidden=false;
+  $('#lobbyCode').textContent=code;showInvite(code);$('#lobbyOv').hidden=false;
+}
+/* invite link: opening it takes the friend straight to the game (only for the direct link, outside Claude) */
+function inviteURL(code){return location.href.split('#')[0]+'#join'+code;}
+function showInvite(code){
+  const url=inviteURL(code);
+  $('#invite').hidden=false;$('#codeHelp').hidden=true;$('#invLink').textContent=url;
+  $('#invWa').href='https://wa.me/?text='+encodeURIComponent('تعال نلعب مدينة جداول الضرب! اضغط على الرابط لتدخل لعبتي: '+url);
+}
+function hideInvite(){$('#invite').hidden=true;$('#codeHelp').hidden=false;}
+$('#invCopy').onclick=async()=>{
+  const b=$('#invCopy');
+  try{await navigator.clipboard.writeText($('#invLink').textContent);b.textContent='تم نسخ الرابط';}
+  catch(e){const r=document.createRange();r.selectNodeContents($('#invLink'));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='الرابط محدد، انسخه';}
+  setTimeout(()=>{b.textContent='انسخ الرابط';},2500);
+};
+function checkInvite(){
+  const m=/^#join(\d{4})$/.exec(location.hash);if(!m)return;
+  const code=m[1];
+  try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+  const cur=$('#n0').value.trim();
+  $('#invCodeShow').textContent=code;$('#invName').value=cur&&cur!=='اللاعب الأول'?cur:'';
+  $('#inviteOv').hidden=false;setTimeout(()=>$('#invName').focus(),50);
+  $('#invGo').onclick=()=>{
+    const nm=$('#invName').value.trim(),inp=$('#invName');
+    if(!nm){inp.classList.remove('shake');void inp.offsetWidth;inp.classList.add('shake');inp.focus();return;}
+    $('#n0').value=nm;saveNames();$('#inviteOv').hidden=true;setMode('online');$('#joinCode').value=code;joinGame(code,false);
+  };
+  $('#invName').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#invGo').click();}};
+  $('#invNo').onclick=()=>{$('#inviteOv').hidden=true;};
 }
 // returns {ref,d} to continue joining, or null when it handled everything (or failed with a message)
 async function connectP2P(code,resume){
@@ -693,7 +733,7 @@ async function connectP2P(code,resume){
     olMsg('');P2P.isHost=true;P2P.code=code;P2P.state=saved;
     OL.on=true;OL.code=code;OL.seat=0;OL.ref=p2pRef();OL.round=saved.round||1;OL.rev=saved.rev||1;
     saveSession();subscribe();
-    if(saved.status==='wait'){OL.waiting=true;$('#lobbyCode').textContent=code;$('#lobbyOv').hidden=false;return null;}
+    if(saved.status==='wait'){OL.waiting=true;$('#lobbyCode').textContent=code;showInvite(code);$('#lobbyOv').hidden=false;return null;}
     enterOnline(saved);showFeed('عدت إلى لعبتك. ينضم صديقك تلقائياً عندما يفتح اللعبة.','info');
     return null;
   }
@@ -759,7 +799,7 @@ async function hostGame(){
     await OL.ref.set({v:1,status:'wait',round:1,rev:1,adv:S.adv,turn:0,endAfter:null,
       players:[{name:myName(),id:MYID,pos:1,stars:0,total:0,keys:[]},null],ev:null,at:Date.now()});
     saveSession();subscribe();
-    $('#lobbyCode').textContent=code;$('#lobbyOv').hidden=false;
+    $('#lobbyCode').textContent=code;hideInvite();$('#lobbyOv').hidden=false;
   }catch(e){leaveOnline();olMsg('تعذّر إنشاء اللعبة. تأكد أن لديك صلاحية التعديل على هذه اللعبة ثم حاول مرة أخرى.');}
   hb.disabled=false;
 }
@@ -947,5 +987,6 @@ $('#restartBtn').onclick=()=>{
 };
 try{if(localStorage.getItem('mtc-mode')==='online')setMode('online');}catch(e){}
 refreshResume();
+checkInvite();
 })();
 </script>
