@@ -295,7 +295,19 @@ function setHG(root,p){
 }
 
 /* ---------- card UI ---------- */
-function showCard(card){
+// the drawn card arrives face down (the back of that city's table), then flips over on a tap or by itself
+function showBack(n){
+  return new Promise(res=>{
+    if(!IMG['back'+n])return res(false);
+    const ov=$('#cardOv'),box=$('#cardBox');
+    box.innerHTML=`<button type="button" class="cardback" id="cardBack" aria-label="اقلب البطاقة"><img src="${IMG['back'+n]}" alt="ظهر بطاقة جدول ${n}"><span>اضغط لقلب البطاقة</span></button>`;
+    ov.hidden=false;ov.scrollTop=0;
+    const b=$('#cardBack');let done=false;
+    const flip=()=>{if(done)return;done=true;b.classList.add('flipout');sfx.tick();setTimeout(()=>res(true),280);};
+    b.onclick=flip;b.focus({preventScroll:true});setTimeout(flip,1600);
+  });
+}
+function showCard(card,flipped){
   return new Promise(resolve=>{
     const ov=$('#cardOv'),box=$('#cardBox');
     const work=!!card.work;
@@ -304,7 +316,7 @@ function showCard(card){
     const head=work
       ?`<div class="card-h"><span class="mnum">${card.id}</span><div class="htitle">${card.title}</div><div class="hstars">${star(true)}</div></div>`
       :`<div class="card-h"><div class="hbadge"><img src="${IMG[city.img]}" alt=""><span class="ltr">×${card.n}</span></div><div class="htitle">${ICON[card.type]}${card.title}</div><div class="hstars">${stars(card.stars)}</div></div>`;
-    box.innerHTML=`<div class="card ${work?'work':''}" style="${work?'':`--tc:${tp.c}`}">${head}<div class="card-b" id="cb"></div><div class="card-f" id="cf"></div></div>`;
+    box.innerHTML=`<div class="card ${work?'work':''}${flipped?' flipin':''}" style="${work?'':`--tc:${tp.c}`}">${head}<div class="card-b" id="cb"></div><div class="card-f" id="cf"></div></div>`;
     ov.hidden=false;ov.scrollTop=0;
     const cb=$('#cb'),cf=$('#cf');
     let vals=(card.fields||[]).map(()=>''),active=0,done=false,raf=0,t0=0;
@@ -851,7 +863,8 @@ async function onDraw(){
   const p=S.players[S.turn],nd=NODES[p.pos];
   const card=nextCard(nd.n);
   sync({t:`${p.name} يحل بطاقة «${card.title}» في ${CITIES[nd.n].name} (${card.stars} ${card.stars===1?'نجمة':'نجوم'})`,k:'card'});
-  const r=await showCard(card);
+  const flipped=await showBack(nd.n);
+  const r=await showCard(card,flipped);
   if(r.ok){p.stars+=card.stars;p.total+=card.stars;renderPlayers();}
   sync({t:r.ok?`${p.name} أجاب إجابة صحيحة وحصل على ${card.stars===1?'نجمة':card.stars===2?'نجمتين':'3 نجوم'}`:`${p.name} لم يُصب هذه المرة`,k:r.ok?'ok':'bad'});
   if(r.ok)await sleep(450);
