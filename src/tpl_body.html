@@ -615,7 +615,11 @@ function renderDeck(){
   b.disabled=S.busy||S.over||!my;
   b.classList.toggle('pulse',!b.disabled);
   const lbl=nd.t==='city'?`<span class="ltr">×${nd.n}</span>`:'';
-  b.innerHTML=my?`اسحب بطاقة${lbl?' '+lbl:''}<small>${OL.on?'دورك يا '+esc(p.name):'دور '+esc(p.name)}</small>`:`دور ${esc(p.name)}<small>انتظر حتى ينهي دوره</small>`;
+  // the deck is a pile of face-down cards showing the back of this city's table
+  const back=IMG['back'+(nd.t==='city'?nd.n:2)];
+  const pile=back?`<span class="pile" aria-hidden="true"><img src="${back}" alt=""><img src="${back}" alt=""><img src="${back}" alt=""></span>`:'';
+  b.setAttribute('aria-label',my?'اسحب بطاقة':'دور '+p.name);
+  b.innerHTML=pile+`<span class="dlbl">${my?`اسحب بطاقة${lbl?' '+lbl:''}<small>${OL.on?'دورك يا '+esc(p.name):'دور '+esc(p.name)}</small>`:`دور ${esc(p.name)}<small>انتظر حتى ينهي دوره</small>`}</span>`;
 }
 function renderAll(){renderNodes();placeCars();renderPlayers();renderDeck();}
 
