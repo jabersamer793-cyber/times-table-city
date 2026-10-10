@@ -74,6 +74,12 @@
         <button class="btn sm alt" id="restartBtn" type="button">لعبة جديدة</button>
       </div>
     </div>
+    <div class="rotatetip" id="rotateTip">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.2" fill="#fff" stroke="#16296B" stroke-width="2"/><path d="M3 15a9 9 0 0 0 6 6M21 9a9 9 0 0 0-6-6" fill="none" stroke="#16296B" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>اللعب أجمل بالعرض: أدر الهاتف</span>
+      <button class="btn sm green" id="landBtn" type="button">العب بالعرض</button>
+      <button class="rtx" id="rotClose" type="button" aria-label="إغلاق">×</button>
+    </div>
     <div class="layout">
       <div id="players"></div>
       <div class="boardbox"><div class="board" id="board"></div></div>
@@ -1047,6 +1053,14 @@ $('#startBtn').onclick=()=>{
   startGame();
 };
 $('#soundBtn').onclick=()=>{S.sound=!S.sound;$('#soundBtn').setAttribute('aria-pressed',String(S.sound));$('#soundBtn').textContent=S.sound?'الصوت: يعمل':'الصوت: متوقف';};
+// landscape on phones: go full screen and turn sideways where the browser allows it (Android); otherwise ask to rotate
+$('#landBtn').onclick=async()=>{
+  let locked=false;
+  try{const el=document.documentElement;if(!document.fullscreenElement&&el.requestFullscreen)await el.requestFullscreen({navigationUI:'hide'});}catch(e){}
+  try{if(screen.orientation&&screen.orientation.lock){await screen.orientation.lock('landscape');locked=true;}}catch(e){}
+  if(!locked)showFeed('أدر الهاتف بالعرض، وتأكد أن قفل تدوير الشاشة متوقف','turn');
+};
+$('#rotClose').onclick=()=>{$('#rotateTip').classList.add('off');};
 let rt=0;
 $('#restartBtn').onclick=()=>{
   const b=$('#restartBtn');

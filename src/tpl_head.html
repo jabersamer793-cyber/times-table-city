@@ -269,5 +269,51 @@ img{max-width:100%}
 /* phones: the two player cards sit side by side, so stack the car above the details */
 @media (max-width:640px){.pcard{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center;padding:8px 6px;overflow:hidden}.pcard .av{width:70px}.pinfo{justify-items:center;width:100%}.pname{justify-content:center;font-size:1.02rem}.starrow{justify-content:center;flex-wrap:wrap}.starrow svg{width:19px;height:19px}.keys{justify-content:center;max-width:100%}.keys img{height:19px}.pwhere,.ptotal{font-size:.8rem}}
 @media (max-width:420px){.fields,.levels,.results{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(5,1fr)}}
+/* phone held upright during the game: suggest turning it */
+.rotatetip{display:none}
+@media (orientation:portrait) and (max-width:600px){
+  .rotatetip:not(.off){display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#FFF3B0;border:3px solid var(--ink);border-radius:14px;padding:6px 10px;margin-bottom:12px;font-weight:800;font-size:.92rem;box-shadow:0 3px 0 var(--ink)}
+  .rotatetip svg{width:24px;height:24px;flex:none;animation:tilt 2s ease-in-out infinite}
+  .rotatetip span{flex:1;min-width:0}
+  .rtx{border:0;background:none;font-size:1.4rem;font-weight:800;line-height:1;padding:0 4px}
+}
+@keyframes tilt{50%{transform:rotate(-90deg)}}
+/* phone held sideways: board fills the height, players beside it, question beside the keypad */
+@media (orientation:landscape) and (max-height:560px){
+  body{padding-block:6px 8px;padding-inline:max(10px,env(safe-area-inset-left,0px)) max(10px,env(safe-area-inset-right,0px))}
+  .wrap{max-width:none}
+  .topbar{margin-bottom:6px;gap:6px}
+  .logo{font-size:1.05rem;-webkit-text-stroke:4px var(--ink)}
+  .btn.sm{font-size:.78rem;padding:3px 9px;border-width:2px;box-shadow:0 2px 0 var(--ink)}
+  .olbadge{font-size:.78rem;padding:1px 8px;border-width:2px}
+  .layout{grid-template-columns:minmax(150px,230px) auto;grid-template-areas:"players board";justify-content:center;align-items:start;gap:12px}
+  .boardbox{width:calc((100vh - 60px) * 100 / 116);width:calc((100dvh - 60px) * 100 / 116);max-width:100%}
+  .board{max-width:none;border-width:3px}
+  #players{grid-template-columns:1fr;gap:8px}
+  .pcard{grid-template-columns:auto minmax(0,1fr);justify-items:stretch;text-align:start;padding:6px 8px;gap:6px;overflow:visible}
+  .pcard .av{width:52px}
+  .pinfo{justify-items:start}
+  .pname{font-size:.95rem;justify-content:flex-start}
+  .pwhere,.ptotal{font-size:.74rem}
+  .starrow,.keys{justify-content:flex-start}
+  .starrow svg{width:16px;height:16px}
+  .keys img{height:16px}
+  .pcard.active::before{inset:-5px;border-radius:22px}
+  #cardOv>.box{width:min(100%,700px)}
+  .card{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"h h" "b f"}
+  .card-h{grid-area:h;padding:5px 10px}
+  .card-b{grid-area:b;align-content:center;padding:8px 10px}
+  .card-f{grid-area:f;align-content:center;padding-inline-end:6px;min-width:0}
+  .res{max-width:300px}
+  .pad{margin:6px auto;max-width:220px;padding-inline:6px}
+  .key{height:36px}
+  .intro .hg{width:44px;height:62px}
+  .cardback img{width:auto;height:min(68vh,300px);height:min(68dvh,300px)}
+  .ann{padding:10px 14px 12px;gap:6px}
+  .ann img{max-height:24vh}
+  .ann h3{font-size:1.3rem}
+  .rules{max-height:58vh}
+  .feed{font-size:.9rem;padding:5px 14px}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
