@@ -89,6 +89,20 @@ img{max-width:100%}
 .chip svg{width:20px;height:20px}
 .h2{margin:0 0 8px;font-family:var(--f-display);font-weight:800;font-size:1.3rem}
 .row-c{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+/* compact main menu: one panel, short rows, segmented choices */
+.setup{gap:14px;margin-top:14px}
+.panel.menu{display:grid;gap:12px;padding:14px 16px}
+.mrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.mrow.stack{display:grid;gap:8px;border-top:3px dashed #D8DCEA;padding-top:12px}
+.mlab{font-family:var(--f-display);font-weight:800;font-size:1.1rem;min-width:6.5em}
+.seg{display:flex;flex:1;min-width:0;border:3px solid var(--ink);border-radius:14px;overflow:hidden;box-shadow:0 3px 0 var(--ink);background:#fff}
+.segb{flex:1;border:0;background:none;padding:8px 10px;font-family:var(--f-display);font-weight:800;font-size:1rem;color:var(--ink-2);min-width:0}
+.segb+.segb{border-inline-start:3px solid var(--ink)}
+.segb[aria-pressed="true"]{background:var(--sun);color:var(--ink)}
+.panel.menu .note{margin:-4px 0 0}
+.panel.menu .sw{width:40px;height:30px}
+.panel.menu .swatches{gap:4px}
+@media (max-width:420px){.mlab{min-width:0;width:100%}.segb{font-size:.92rem;padding:7px 6px}}
 
 /* game */
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
@@ -179,9 +193,12 @@ img{max-width:100%}
 .deck.pulse .pile img:nth-child(3){animation:peek 1.4s ease-in-out infinite}
 @keyframes peek{50%{transform:rotate(3deg) translateY(-6%)}}
 .deck.pulse{animation:none}
-.deck .dlbl{display:grid;gap:2px;justify-items:center;background:var(--dc,var(--sun));color:#fff;border:3px solid var(--ink);border-radius:16px;padding:6px 14px;box-shadow:0 4px 0 var(--ink);text-shadow:0 2px 0 rgba(22,41,107,.5);font-size:clamp(.85rem,2.8vw,1.25rem);line-height:1.15;min-width:0}
-.deck .dlbl small{font-size:.66em}
-.deck:active .dlbl{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.deck .dturn{display:grid;gap:0;justify-items:center;line-height:1.15;min-width:0;color:#fff;font-family:var(--f-display);font-size:clamp(.9rem,2.9vw,1.3rem);-webkit-text-stroke:4px var(--ink);paint-order:stroke fill}
+.deck .dturn small{font-size:.66em;font-family:var(--f-body);font-weight:800;-webkit-text-stroke:3px var(--ink)}
+.deck .dcar{width:clamp(40px,10vw,64px);filter:drop-shadow(0 2px 0 rgba(22,41,107,.35))}
+.deck .dcar svg{width:100%;height:auto;display:block}
+.deck[disabled] .dturn small{opacity:.9}
+.deck:active .pile{transform:translateY(3px)}
 .deck:active{transform:none}
 @keyframes pulse{50%{transform:scale(1.04)}}
 
@@ -330,8 +347,8 @@ img{max-width:100%}
   .rules{max-height:58vh}
   .feed{font-size:.9rem;padding:5px 14px}
   .deck{gap:6px}
-  .deck .dlbl{font-size:.72rem;padding:3px 7px;border-width:2px;border-radius:10px;box-shadow:0 2px 0 var(--ink);white-space:nowrap}
-  .deck .dlbl small{font-size:.8em}
+  .deck .dturn{font-size:.8rem;-webkit-text-stroke:3px var(--ink)}
+  .deck .dcar{width:34px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
