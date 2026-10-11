@@ -26,7 +26,7 @@ img{max-width:100%}
 .ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
 .eq{direction:ltr;unicode-bidi:isolate;display:block;text-align:center;font-family:var(--f-display);font-weight:700}
 :focus-visible{outline:4px solid var(--sun-d);outline-offset:2px}
-.wrap{max-width:1040px;margin-inline:auto}
+.wrap{max-width:1400px;margin-inline:auto}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--sun);color:var(--ink);border:3px solid var(--ink);border-radius:16px;padding:10px 22px;font-family:var(--f-display);font-weight:800;font-size:1.25rem;box-shadow:0 5px 0 var(--ink);transition:transform .08s,box-shadow .08s}
@@ -114,7 +114,8 @@ img{max-width:100%}
 .logo{margin:0;font-family:var(--f-display);font-weight:800;font-size:1.6rem;color:var(--sun);-webkit-text-stroke:6px var(--ink);paint-order:stroke fill;text-shadow:0 3px 0 var(--ink)}
 .tools{display:flex;gap:8px;flex-wrap:wrap}
 .layout{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"players" "board"}
-@media (min-width:900px){.layout{grid-template-columns:minmax(0,640px) minmax(260px,1fr);grid-template-areas:"board players";align-items:start}}
+/* the board takes all the width it can; the players sit in a narrow column beside it */
+@media (min-width:900px){.layout{grid-template-columns:minmax(0,1fr) 250px;grid-template-areas:"board players";align-items:start}}
 #players{grid-area:players;display:grid;gap:12px;grid-template-columns:1fr 1fr;align-content:start}
 @media (min-width:900px){#players{grid-template-columns:1fr}}
 .boardbox{grid-area:board;min-width:0}
@@ -140,7 +141,7 @@ img{max-width:100%}
 .invname{width:min(100%,280px);text-align:start}
 .invname input{font:inherit;font-weight:700;border:3px solid var(--ink);border-radius:12px;padding:9px 12px;background:#fff;color:var(--ink);width:100%}
 .waiting{color:var(--ink-2);font-weight:800!important;animation:pulse 1.4s ease-in-out infinite}
-.feed{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translate(-50%,160%);z-index:45;max-width:min(92vw,520px);background:#fff;color:var(--ink);border:4px solid var(--ink);border-radius:18px;padding:8px 18px;font-weight:800;font-size:1.05rem;text-align:center;box-shadow:0 6px 0 var(--ink);transition:transform .35s cubic-bezier(.3,1.4,.5,1);pointer-events:none}
+.feed{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translate(-50%,-180%);z-index:45;max-width:min(92vw,520px);background:#fff;color:var(--ink);border:4px solid var(--ink);border-radius:18px;padding:8px 18px;font-weight:800;font-size:1.05rem;text-align:center;box-shadow:0 6px 0 var(--ink);transition:transform .35s cubic-bezier(.3,1.4,.5,1);pointer-events:none}
 .feed.show{transform:translate(-50%,0)}
 .feed.ok{background:#C9F2CF}.feed.bad{background:#FFD3CC}.feed.key{background:#FFF3B0}.feed.turn{background:var(--sun)}
 .pinfo{display:grid;gap:3px;min-width:0}
@@ -154,7 +155,7 @@ img{max-width:100%}
 .keys img{height:28px;width:auto;opacity:.22;filter:grayscale(1);transition:.3s}
 .keys img.on{opacity:1;filter:none}
 .ptotal{font-size:.88rem;font-weight:700}
-.board{position:relative;direction:ltr;width:100%;max-width:640px;aspect-ratio:100/116;margin-inline:auto;background:radial-gradient(circle at 12% 18%,#b9ea96 0 9%,transparent 9.5%),radial-gradient(circle at 88% 80%,#b9ea96 0 11%,transparent 11.5%),radial-gradient(circle at 60% 50%,#a7e283 0 7%,transparent 7.5%),repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 14px,transparent 14px 28px),var(--grass);border:4px solid var(--ink);border-radius:26px;box-shadow:0 7px 0 var(--ink),inset 0 -10px 0 rgba(22,41,107,.08);overflow:hidden}
+.board{position:relative;direction:ltr;width:100%;max-width:1100px;aspect-ratio:100/116;margin-inline:auto;background:radial-gradient(circle at 12% 18%,#b9ea96 0 9%,transparent 9.5%),radial-gradient(circle at 88% 80%,#b9ea96 0 11%,transparent 11.5%),radial-gradient(circle at 60% 50%,#a7e283 0 7%,transparent 7.5%),repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 14px,transparent 14px 28px),var(--grass);border:4px solid var(--ink);border-radius:26px;box-shadow:0 7px 0 var(--ink),inset 0 -10px 0 rgba(22,41,107,.08);overflow:hidden}
 .road{position:absolute;inset:0;width:100%;height:100%}
 /* stations: cut-out buildings standing on a raised round platform */
 .node{position:absolute;width:15%;aspect-ratio:1/1;transform:translate(-50%,-95%);direction:rtl;pointer-events:none}
@@ -189,6 +190,12 @@ img{max-width:100%}
 .deck.pulse{animation:pulse 1.4s ease-in-out infinite}
 /* the deck looks like a pile of face-down question cards */
 .deckbox{top:75.5%}
+/* wide board (5 stations per row): smaller stations and cars, card pile at the bottom left, and sized so the whole board fits on screen */
+.board.wide{max-width:min(1100px,calc((100vh - 80px) * 100 / 88));max-width:min(1100px,calc((100dvh - 80px) * 100 / 88))}
+.board.wide .node{width:12.5%}
+.board.wide .node.castle{width:18%}
+.board.wide .car{width:6.6%}
+.board.wide .deckbox{left:2%;right:61%;top:61%;bottom:3%}
 .deck{background:none;border:0;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;gap:clamp(8px,2.5vw,18px);text-shadow:none;color:var(--ink)}
 .deck .pile{position:relative;height:100%;aspect-ratio:3/4;flex:none}
 .deck .pile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:3px solid var(--ink);border-radius:12%/9%;box-shadow:0 3px 0 rgba(22,41,107,.45)}
@@ -330,7 +337,7 @@ img{max-width:100%}
   .btn.sm{font-size:.78rem;padding:3px 9px;border-width:2px;box-shadow:0 2px 0 var(--ink)}
   .olbadge{font-size:.78rem;padding:1px 8px;border-width:2px}
   .layout{grid-template-columns:minmax(150px,230px) auto;grid-template-areas:"players board";justify-content:center;align-items:start;gap:12px}
-  .boardbox{width:calc((100vh - 60px) * 100 / 116);width:calc((100dvh - 60px) * 100 / 116);max-width:100%}
+  .boardbox{width:calc((100vh - 60px) * 100 / var(--bh,116));width:calc((100dvh - 60px) * 100 / var(--bh,116));max-width:100%}
   .board{max-width:none;border-width:3px}
   #players{grid-template-columns:1fr;gap:8px}
   .pcard{grid-template-columns:auto minmax(0,1fr);justify-items:stretch;text-align:start;padding:6px 8px;gap:6px;overflow:visible}
@@ -979,17 +986,29 @@ const CUTP=Promise.all([...Object.values(CITIES).map(c=>c.img),'barrier'].map(cu
 const pic=k=>CUT[k]||IMG[k];
 
 /* ---------- board ---------- */
-/* board units: 100 wide, BH tall (the board box has the same aspect ratio, so nothing stretches) */
-const BH=116;
-function npos(i){const row=Math.floor(i/4),idx=i%4;let col=row%2===0?3-idx:idx;if(i===12)col=0;return{x:(col+.5)*25,y:i===12?103:17+row*29.5};}
+/* board units: 100 wide, BH tall (the board box has the same aspect ratio, so nothing stretches).
+   Upright screens get a tall board, 4 stations per row; wide screens get a wide board, 5 per row, so it fills the width. */
+let WIDE=false,BH=116;
+function pickLayout(){
+  const w=innerWidth>=640&&innerWidth>innerHeight*1.15;
+  if(w===WIDE)return false;
+  WIDE=w;BH=w?88:116;document.documentElement.style.setProperty('--bh',BH);return true;
+}
+function npos(i){
+  if(WIDE){const row=Math.floor(i/5),idx=i%5,col=row%2===0?4-idx:idx;return{x:(col+.5)*20,y:17+row*28};}
+  const row=Math.floor(i/4),idx=i%4;let col=row%2===0?3-idx:idx;if(i===12)col=0;return{x:(col+.5)*25,y:i===12?103:17+row*29.5};
+}
 const pctY=y=>y/BH*100;
+let relayT=0;
+const relayout=()=>{clearTimeout(relayT);relayT=setTimeout(()=>{if(pickLayout()&&S.players.length&&!$('#game').hidden){buildBoard();renderAll();}},250);};
+window.addEventListener('resize',relayout);window.addEventListener('orientationchange',relayout);
 /* scenery: trees, bushes, houses, street lamps, traffic lights and zebra crossings, placed once with a fixed seed */
 function scenery(){
   let seed=20261007;const R=()=>(seed=seed*16807%2147483647)/2147483647;
   const segs=[];for(let i=0;i<12;i++)segs.push([npos(i),npos(i+1)]);
   const dRoad=(x,y)=>Math.min(...segs.map(([a,b])=>{const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy)));return Math.hypot(x-a.x-t*dx,y-a.y-t*dy);}));
-  const onNode=(x,y)=>NODES.some((nd,i)=>{const p=npos(i),c=nd.t==='castle',hw=c?12:8.6,top=c?25:17;return Math.abs(x-p.x)<hw&&y>p.y-top&&y<p.y+6;});
-  const onDeck=(x,y)=>x>26&&y>88;
+  const onNode=(x,y)=>NODES.some((nd,i)=>{const p=npos(i),c=nd.t==='castle',hw=WIDE?(c?10:7.4):(c?12:8.6),top=WIDE?(c?20:15):(c?25:17);return Math.abs(x-p.x)<hw&&y>p.y-top&&y<p.y+6;});
+  const onDeck=WIDE?(x,y)=>x<40&&y>52:(x,y)=>x>26&&y>88;
   const placed=[],out=[];
   // gap: how far from the road edge an item must stand; space: extra room around each one so they spread out
   const free=(x,y,r,gap,space)=>x>r+.5&&x<99.5-r&&y>r+1&&y<BH-1&&dRoad(x,y)>gap+r&&!onNode(x,y)&&!onDeck(x,y)&&placed.every(([a,b,c])=>Math.hypot(a-x,b-y)>c+r+space);
@@ -1041,13 +1060,14 @@ const carSide=(c,d)=>`<svg viewBox="0 0 120 70" aria-hidden="true">
 <circle cx="32" cy="54" r="11" fill="#2B3354" stroke="#16296B" stroke-width="3"/><circle cx="32" cy="54" r="4.5" fill="#E6E9F5"/>
 <circle cx="90" cy="54" r="11" fill="#2B3354" stroke="#16296B" stroke-width="3"/><circle cx="90" cy="54" r="4.5" fill="#E6E9F5"/></svg>`;
 function buildBoard(){
-  const b=$('#board');
+  pickLayout();
+  const b=$('#board');b.classList.toggle('wide',WIDE);b.style.aspectRatio=`100 / ${BH}`;
   const pts=NODES.map((_,i)=>{const p=npos(i);return p.x+','+p.y}).join(' ');
   const pl=(st,w,extra)=>`<polyline points="${pts}" fill="none" stroke="${st}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${extra||''}/>`;
   // zebra crossings on the straight stretch just before each city
   let zebra='';
   NODES.forEach((nd,i)=>{if(nd.t!=='city'||i===0)return;const a=npos(i-1),p=npos(i);if(a.y!==p.y)return;
-    const x0=p.x+(a.x>p.x?9:-11);for(let s=0;s<4;s++)zebra+=`<rect x="${x0+s*.55*1.8}" y="${p.y-3.6}" width=".55" height="7.2" fill="#fff" opacity=".92"/>`;});
+    const x0=p.x+(a.x>p.x?(WIDE?7:9):(WIDE?-9:-11));for(let s=0;s<4;s++)zebra+=`<rect x="${x0+s*.55*1.8}" y="${p.y-3.6}" width=".55" height="7.2" fill="#fff" opacity=".92"/>`;});
   b.innerHTML=`<svg class="road" viewBox="0 0 100 ${BH}" aria-hidden="true">
     ${pl('#16296B',13.6,'transform="translate(0 1.3)"')}${pl('#16296B',13.6)}${pl('#D8DCEA',12.2)}${pl('#16296B',10)}${pl('#454E6B',9.3)}
     ${pl('#F4F6FF',8.1)}${pl('#454E6B',7.5)}${pl('#FFD23F',.6,'stroke-dasharray="2.2 1.8"')}${zebra}<g class="scn">${scenery()}</g></svg>
