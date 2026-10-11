@@ -44,6 +44,9 @@
         <button class="btn" id="startBtn" type="button">ابدأ الرحلة</button>
         <button class="btn alt" id="rulesBtn0" type="button">كيف تُلعب؟</button>
       </div>
+      <div class="row-c" id="installRow" hidden>
+        <button class="btn green" id="installBtn" type="button">ثبّت اللعبة على جهازك</button>
+      </div>
     </div>
   </section>
 
@@ -90,6 +93,14 @@
     <p>رمز اللعبة <b class="ltr" id="invCodeShow"></b>. اكتب اسمك ثم ادخل.</p>
     <label class="lab invname" for="invName"><span>اسمك</span><input id="invName" maxlength="14" autocomplete="off"></label>
     <div class="row-c"><button class="btn green" id="invGo" type="button">ادخل اللعبة</button><button class="btn alt" id="invNo" type="button">ليس الآن</button></div>
+  </div></div></div></div>
+  <div class="ov" id="iosOv" hidden><div class="box"><div class="card" style="--tc:var(--green)"><div class="ann">
+    <h3>ثبّت اللعبة على الآيفون</h3>
+    <p>1. افتح هذه الصفحة في <b>سفاري</b>.</p>
+    <p>2. اضغط زر المشاركة <svg viewBox="0 0 24 24" width="22" height="22" style="vertical-align:middle" aria-label="مشاركة"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5" fill="none" stroke="#2E86F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10H6v10h12V10h-2" fill="none" stroke="#2E86F0" stroke-width="2" stroke-linejoin="round"/></svg> أسفل الشاشة.</p>
+    <p>3. اختر <b>«إضافة إلى الشاشة الرئيسية»</b> ثم <b>«إضافة»</b>.</p>
+    <p>بعدها تفتح اللعبة من أيقونتها مثل أي تطبيق، وتعمل بدون إنترنت.</p>
+    <div class="row-c"><button class="btn" id="iosOk" type="button">حسنًا</button></div>
   </div></div></div></div>
   <div class="ov" id="rulesOv" hidden><div class="box"><div class="card" style="--tc:var(--blue)">
     <div class="card-h"><div class="htitle">دليل اللعبة</div></div>
@@ -1290,6 +1301,26 @@ window.addEventListener('resize',()=>setTimeout(applyLand,50));
 new MutationObserver(applyLand).observe($('#game'),{attributes:true,attributeFilter:['hidden']});
 applyLand();
 $('#rotClose').onclick=()=>{$('#rotateTip').classList.add('off');};
+// install as an app (GitHub Pages copy): offline cache + an install button; Chrome/Edge/Android show their own prompt, iPhone gets the Share steps
+(()=>{
+  let inFrame=true;try{inFrame=window.top!==window;}catch(e){}
+  const web=/^https?:$/.test(location.protocol)&&(location.protocol==='https:'||/^(localhost|127\.0\.0\.1)$/.test(location.hostname));
+  if(inFrame||!web)return;
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  if(standalone)return;
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  let ask=null;
+  const row=$('#installRow');
+  if(ios)row.hidden=false;
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();ask=e;row.hidden=false;});
+  addEventListener('appinstalled',()=>{row.hidden=true;ask=null;showFeed('تم تثبيت اللعبة، افتحها من أيقونتها','turn');});
+  $('#installBtn').onclick=async()=>{
+    if(ask){ask.prompt();try{const r=await ask.userChoice;if(r.outcome==='accepted')row.hidden=true;}catch(e){}ask=null;return;}
+    if(ios)$('#iosOv').hidden=false;
+  };
+  $('#iosOk').onclick=()=>{$('#iosOv').hidden=true;};
+})();
 let rt=0;
 $('#restartBtn').onclick=()=>{
   const b=$('#restartBtn');
