@@ -650,7 +650,7 @@ function renderDeck(){
   // no label box: tap the cards themselves; a small line beside them says whose turn it is
   const who=OL.on&&my?'دورك':'دور '+esc(p.name);
   const wait=S.robot&&S.turn===1?'الروبوت يفكّر…':'انتظر دورك';
-  b.innerHTML=pile+`<span class="dturn"><span class="dcar">${carSide(PC[S.turn],PCD[S.turn])}</span><b>${who}</b><small>${my?'اضغط على البطاقات':wait}</small></span>`;
+  b.innerHTML=pile+`<span class="dturn"><span class="dcar">${carSide(PC[S.turn],PCD[S.turn])}</span><b>${who}</b><small>${my?(p.pos===0?'خذ مفتاح أول مدينة':'اضغط على البطاقات'):wait}</small></span>`;
 }
 function renderAll(){renderNodes();placeCars();renderPlayers();renderDeck();}
 
@@ -857,7 +857,7 @@ async function hostGame(){
     leaveOnline();
     OL.on=true;OL.code=code;OL.seat=0;OL.ref=db.doc('games/'+code);OL.rev=1;OL.round=1;OL.waiting=true;
     await OL.ref.set({v:1,status:'wait',round:1,rev:1,adv:S.adv,turn:0,endAfter:null,
-      players:[{name:myName(),id:MYID,car:CHOICE[0],pos:1,stars:0,total:0,keys:[]},null],ev:null,at:Date.now()});
+      players:[{name:myName(),id:MYID,car:CHOICE[0],pos:0,stars:0,total:0,keys:[]},null],ev:null,at:Date.now()});
     saveSession();subscribe();
     olMsg('');$('#lobbyCode').textContent=code;net.claude?hideInvite():showInvite(code);$('#lobbyOv').hidden=false;
   }catch(e){leaveOnline();olMsg(net.claude?'تعذّر إنشاء اللعبة. تأكد أن لديك صلاحية التعديل على هذه اللعبة ثم حاول مرة أخرى.':'تعذّر الاتصال بخدمة اللعب أونلاين. تأكد من الاتصال بالإنترنت وحاول مرة أخرى.');}
@@ -887,7 +887,7 @@ async function joinGame(code,resume){
       seat=1;let nm=myName();if(nm===d.players[0].name)nm+=' 2';
       // my colour, unless the host already drives it
       let car=CHOICE[0];if(car===d.players[0].car)car=CHOICE[1]!==car?CHOICE[1]:CARS.findIndex((_,i)=>i!==car);
-      d.players[1]={name:nm,id:MYID,car,pos:1,stars:0,total:0,keys:[]};
+      d.players[1]={name:nm,id:MYID,car,pos:0,stars:0,total:0,keys:[]};
       d.status='play';d.rev=(d.rev||1)+1;d.at=Date.now();d.ev={t:`انضم ${nm} إلى اللعبة`,k:'info'};
       await ref.set(d);
     }
@@ -902,7 +902,9 @@ async function joinGame(code,resume){
 async function onDraw(){
   if(S.busy||S.over||!mine())return;
   S.busy=true;renderDeck();
-  const p=S.players[S.turn],nd=NODES[p.pos];
+  const p=S.players[S.turn];
+  if(p.pos===0)await enterFirstCity(p);
+  const nd=NODES[p.pos];
   const card=nextCard(nd.n);
   sync({t:`${p.name} يحل بطاقة «${card.title}» في ${CITIES[nd.n].name} (${card.stars} ${card.stars===1?'نجمة':'نجوم'})`,k:'card'});
   const flipped=await showBack(nd.n);
@@ -919,8 +921,10 @@ const ROBOT_HIT={1:.85,2:.7,3:.55};
 async function robotTurn(){
   if(!S.robot||S.over||S.turn!==1)return;
   S.busy=true;renderDeck();
-  const p=S.players[1],nd=NODES[p.pos];
+  const p=S.players[1];
   await sleep(800);
+  if(p.pos===0)await enterFirstCity(p);
+  const nd=NODES[p.pos];
   const card=nextCard(nd.n);
   showFeed(`الروبوت يحل بطاقة «${card.title}» (${card.stars===1?'نجمة':card.stars===2?'نجمتان':'3 نجوم'})… يفكّر`,'card');
   await sleep(1900);
@@ -935,13 +939,30 @@ async function robotTurn(){
 }
 // big pop-up for a person; just a short message for the robot so play keeps flowing
 async function tell(p,o){if(isBot(p)){showFeed(o.title,'key');await sleep(1700);}else await announce(o);}
+/* keys open a city before you enter it: the first city's key on your first turn,
+   then 5 stars in a city earn the key to the next one (after the last city, the castle gate opens) */
+function giveKey(p,n){p.keys.push(n);sfx.key();setTimeout(()=>citySound(n),450);renderNodes();renderPlayers();}
+async function enterFirstCity(p){
+  const c=CITIES[2];
+  giveKey(p,2);
+  await tell(p,{img:IMG[c.key],cls:'spin',title:`مفتاح ${c.name}`,text:`أخذ ${esc(p.name)} مفتاح أول مدينة، والسيارة تدخل ${c.name} الآن!`,btn:'ادخل المدينة'});
+  await movePawn(p,1);
+  sync({t:`${p.name} أخذ مفتاح ${c.name} ودخلها`,k:'key',n:2});
+}
 async function unlockAndMove(p){
-  const n=NODES[p.pos].n,c=CITIES[n];
-  p.keys.push(n);sfx.key();setTimeout(()=>citySound(n),450);renderNodes();renderPlayers();
-  await tell(p,{img:IMG[c.key],cls:'spin',title:`مفتاح ${c.name}`,text:`جمع ${esc(p.name)} 5 نجوم وحصل على المفتاح. الطريق إلى المحطة التالية صار مفتوحاً!`,btn:'انطلق بالسيارة'});
+  const n=NODES[p.pos].n;
+  let k=p.pos+1;while(k<12&&NODES[k].t!=='city')k++;
+  const next=NODES[k].t==='city'?NODES[k].n:0;
+  if(next){
+    const c=CITIES[next];giveKey(p,next);
+    await tell(p,{img:IMG[c.key],cls:'spin',title:`مفتاح ${c.name}`,text:`جمع ${esc(p.name)} 5 نجوم وحصل على مفتاح ${c.name}. هيا ننطلق إليها!`,btn:'انطلق بالسيارة'});
+  }else{
+    sfx.key();
+    await tell(p,{img:IMG.castle,title:'بوابة القلعة مفتوحة!',text:`جمع ${esc(p.name)} 5 نجوم في آخر مدينة، والطريق إلى قلعة أبطال الضرب صار مفتوحاً!`,btn:'انطلق إلى القلعة'});
+  }
   p.stars=0;
   await movePawn(p,p.pos+1);
-  sync({t:`${p.name} حصل على مفتاح ${c.name} وانطلق بسيارته`,k:'key',n});
+  sync({t:next?`${p.name} حصل على مفتاح ${CITIES[next].name} وانطلق إليها`:`${p.name} انطلق إلى القلعة`,k:'key',n:next});
   let bonus=false;
   if(NODES[p.pos].t==='work'){
     renderPlayers();
@@ -999,7 +1020,7 @@ function gameOver(remote){
 function newOnlineRound(){
   OL.round++;OL.rev++;
   const d={v:1,status:'play',round:OL.round,rev:OL.rev,adv:S.adv,turn:0,endAfter:null,
-    players:S.players.map(p=>({name:p.name,id:p.id||'',car:p.car,pos:1,stars:0,total:0,keys:[]})),ev:{t:'بدأت جولة جديدة',k:'info'},at:Date.now()};
+    players:S.players.map(p=>({name:p.name,id:p.id||'',car:p.car,pos:0,stars:0,total:0,keys:[]})),ev:{t:'بدأت جولة جديدة',k:'info'},at:Date.now()};
   const ref=OL.ref;OL.q=OL.q.then(()=>ref.set(d)).catch(()=>{});
   enterOnline(d);
 }
@@ -1010,15 +1031,9 @@ async function startGame(){
   S.turn=0;S.decks={};S.mdeck=[];S.endAfter=null;S.over=false;S.busy=true;
   $('#setup').hidden=true;$('#game').hidden=false;window.scrollTo(0,0);
   await CUTP;
-  buildBoard();renderAll();
-  await sleep(500);
-  for(const p of S.players){p.hd=heading(0);}
-  placeCars();await sleep(150);
-  for(const p of S.players){p.pos=1;}
-  placeCars();renderPlayers();sfx.step();
-  await sleep(900);
-  for(const p of S.players){p.hd=null;}
-  S.busy=false;renderAll();
+  // both cars wait at the start; each player takes the first city's key on their first turn
+  buildBoard();S.busy=false;renderAll();
+  showFeed(`${S.players[0].name}: اضغط على البطاقات لتأخذ مفتاح ${CITIES[2].name}`,'turn');
 }
 function showSetup(){$('#game').hidden=true;$('#setup').hidden=false;window.scrollTo(0,0);refreshResume();}
 
@@ -1030,7 +1045,7 @@ $('#rulesBody').innerHTML=[
 ['اللعب أونلاين','ينشئ أحد اللاعبين لعبة فيظهر له رمز من 4 أرقام، ويكتبه الآخر في «انضم». أو يرسل له رابط الدعوة فيدخل مباشرة. يرى كل لاعب حركة سيارة صديقه ونتائجه مباشرة، وإذا أُغلقت الصفحة يرجع اللاعب بزر «العودة إلى لعبتي».'],
 ['مسار اللعبة','تسير السيارتان على الشارع عبر 8 مدن تمثل جداول الضرب من 2 إلى 9، وفي نهاية الطريق توجد قلعة أبطال الضرب.'],
 ['بطاقات المدن','في كل مدينة 15 بطاقة سؤال. للبطاقات ثلاثة مستويات: نجمة واحدة (سهلة)، نجمتان (متوسطة)، ثلاث نجوم (صعبة). وتتنوع التحديات بين: تحدي السرعة، لغز، أكمل الجدول، أكمل الفراغ.'],
-['نظام النجوم','عند الإجابة الصحيحة يحصل اللاعب على النجوم الموجودة على البطاقة. يحتاج إلى 5 نجوم ليحصل على مفتاح المدينة وتنطلق سيارته إلى المحطة التالية. عند الوصول إلى مدينة جديدة يبدأ عدّ النجوم من جديد.'],
+['نظام النجوم','عند الإجابة الصحيحة يحصل اللاعب على النجوم الموجودة على البطاقة. لا تدخل السيارة مدينة إلا بمفتاحها: في أول دور يأخذ كل لاعب مفتاح حديقة الألعاب ويدخلها. وفي كل مدينة، 5 نجوم تعطي مفتاح المدينة التالية فتنطلق السيارة إليها، ويبدأ عدّ النجوم من جديد. وفي آخر مدينة تفتح 5 نجوم بوابة القلعة.'],
 ['نظام الأدوار','كل دور بطاقة واحدة فقط. بعد الإجابة ينتهي الدور وينتقل اللعب إلى اللاعب الآخر، حتى لو كانت البطاقة سهلة.'],
 ['ورشة الصيانة','توجد 3 محطات ورشة صيانة على الطريق. عند وصول السيارة إليها يسحب اللاعب بطاقة من صندوق يحتوي على 6 تحديات إضافية. إذا نجح يحصل على نجمة إضافية تُحسب له في المدينة التالية.'],
 ['الساعة الرملية','تُستخدم مع تحديات السرعة (وتحديات الصيانة المؤقتة) لتحديد الوقت المسموح للإجابة.'],
