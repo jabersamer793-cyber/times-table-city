@@ -33,3 +33,5 @@
 ## الأصوات
 
 أصوات المدن وصوت السيارة تسجيلات حقيقية من [Big Sound Bank](https://bigsoundbank.com) برخصة CC0 (ملكية عامة)، مقصوصة إلى ثوانٍ قليلة.
+
+صوت الإسعاف من تسجيل [Ambulance Sounds2.wav](https://commons.wikimedia.org/wiki/File:Ambulance_Sounds2.wav) للمستخدم Demircimehmed على ويكيميديا كومنز، برخصة [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)، مقصوص إلى 3.4 ثانية.
