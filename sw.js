@@ -1,6 +1,6 @@
 // Keeps the game playable without internet once installed.
 // The game page is fetched fresh when online (so updates arrive) and served from the cache when offline.
-const CACHE = 'mtc-v9';
+const CACHE = 'mtc-v10';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png'];
 
 self.addEventListener('install', e => {
