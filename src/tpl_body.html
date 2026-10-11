@@ -643,7 +643,7 @@ function scenery(){
   // gap: how far from the road edge an item must stand; space: extra room around each one so they spread out
   const free=(x,y,r,gap,space)=>x>r+.5&&x<99.5-r&&y>r+1&&y<BH-1&&dRoad(x,y)>gap+r&&!onNode(x,y)&&!onDeck(x,y)&&placed.every(([a,b,c])=>Math.hypot(a-x,b-y)>c+r+space);
   const scatter=(kind,n,r,tries,gap,space)=>{let k=0;for(let t=0;t<tries&&k<n;t++){const x=R()*100,y=R()*BH;if(free(x,y,r,gap,space)){placed.push([x,y,r]);out.push({k:kind,x,y,v:R()});k++;}}};
-  scatter('house',8,4.3,900,7.8,0);
+  scatter('house',4,4.3,1500,7.8,12);
   scatter('pond',1,5.5,600,8.5,0);
   // fewer trees, kept back from the road and spread out
   scatter('tree',26,2.1,5000,10,2.5);
