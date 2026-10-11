@@ -636,7 +636,7 @@ function scenery(){
   const segs=[];for(let i=0;i<12;i++)segs.push([npos(i),npos(i+1)]);
   const dRoad=(x,y)=>Math.min(...segs.map(([a,b])=>{const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy)));return Math.hypot(x-a.x-t*dx,y-a.y-t*dy);}));
   const onNode=(x,y)=>NODES.some((nd,i)=>{const p=npos(i),c=nd.t==='castle',hw=WIDE?(c?10:7.4):(c?12:8.6),top=WIDE?(c?20:15):(c?25:17);return Math.abs(x-p.x)<hw&&y>p.y-top&&y<p.y+6;});
-  const onDeck=WIDE?(x,y)=>x<40&&y>52:(x,y)=>x>26&&y>88;
+  const onDeck=WIDE?(x,y)=>x<32&&y>56:(x,y)=>x>31&&y>91;
   const placed=[],out=[];
   // gap: how far from the road edge an item must stand; space: extra room around each one so they spread out
   const free=(x,y,r,gap,space)=>x>r+.5&&x<99.5-r&&y>r+1&&y<BH-1&&dRoad(x,y)>gap+r&&!onNode(x,y)&&!onDeck(x,y)&&placed.every(([a,b,c])=>Math.hypot(a-x,b-y)>c+r+space);

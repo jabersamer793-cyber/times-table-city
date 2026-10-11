@@ -189,13 +189,15 @@ img{max-width:100%}
 .deck[disabled]{filter:grayscale(.6);opacity:.7}
 .deck.pulse{animation:pulse 1.4s ease-in-out infinite}
 /* the deck looks like a pile of face-down question cards */
-.deckbox{top:75.5%}
+.deckbox{top:80.5%;bottom:4%;left:34%;right:6%}
 /* wide board (5 stations per row): smaller stations and cars, card pile at the bottom left, and sized so the whole board fits on screen */
 .board.wide{max-width:min(1100px,calc((100vh - 80px) * 100 / 88));max-width:min(1100px,calc((100dvh - 80px) * 100 / 88))}
 .board.wide .node{width:12.5%}
 .board.wide .node.castle{width:18%}
 .board.wide .car{width:6.6%}
-.board.wide .deckbox{left:2%;right:61%;top:61%;bottom:3%}
+.board.wide .deckbox{left:3%;right:70%;top:71%;bottom:6%}
+.board.wide .deck .dturn{font-size:clamp(.75rem,1.3vw,1rem)}
+.board.wide .deck .dcar{width:clamp(28px,3.4vw,44px)}
 .deck{background:none;border:0;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;gap:clamp(8px,2.5vw,18px);text-shadow:none;color:var(--ink)}
 .deck .pile{position:relative;height:100%;aspect-ratio:3/4;flex:none}
 .deck .pile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:3px solid var(--ink);border-radius:12%/9%;box-shadow:0 3px 0 rgba(22,41,107,.45)}
@@ -1008,7 +1010,7 @@ function scenery(){
   const segs=[];for(let i=0;i<12;i++)segs.push([npos(i),npos(i+1)]);
   const dRoad=(x,y)=>Math.min(...segs.map(([a,b])=>{const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy)));return Math.hypot(x-a.x-t*dx,y-a.y-t*dy);}));
   const onNode=(x,y)=>NODES.some((nd,i)=>{const p=npos(i),c=nd.t==='castle',hw=WIDE?(c?10:7.4):(c?12:8.6),top=WIDE?(c?20:15):(c?25:17);return Math.abs(x-p.x)<hw&&y>p.y-top&&y<p.y+6;});
-  const onDeck=WIDE?(x,y)=>x<40&&y>52:(x,y)=>x>26&&y>88;
+  const onDeck=WIDE?(x,y)=>x<32&&y>56:(x,y)=>x>31&&y>91;
   const placed=[],out=[];
   // gap: how far from the road edge an item must stand; space: extra room around each one so they spread out
   const free=(x,y,r,gap,space)=>x>r+.5&&x<99.5-r&&y>r+1&&y<BH-1&&dRoad(x,y)>gap+r&&!onNode(x,y)&&!onDeck(x,y)&&placed.every(([a,b,c])=>Math.hypot(a-x,b-y)>c+r+space);
