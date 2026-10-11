@@ -651,6 +651,9 @@ async function movePawn(p,to){
     p.pos++;placeCars();renderPlayers();if(!engine)sfx.step();await sleep(700);
   }
   p.hd=null;placeCars();
+  // the city's own sound plays when the car arrives there (not at the workshop on the way)
+  const nd=NODES[p.pos];
+  if(steps>0&&nd.t==='city')citySound(nd.n);
 }
 
 /* ---------- players panel ---------- */
@@ -853,7 +856,7 @@ function onRemote(snap){
   OL.apply=OL.apply.then(()=>applyRemote(d)).catch(()=>{});
 }
 async function applyRemote(d){
-  if(d.ev&&d.ev.t){showFeed(d.ev.t,d.ev.k);if(d.ev.k==='ok')sfx.ok();else if(d.ev.k==='bad')sfx.bad();else if(d.ev.k==='key'){sfx.key();if(d.ev.n)setTimeout(()=>citySound(d.ev.n),450);}}
+  if(d.ev&&d.ev.t){showFeed(d.ev.t,d.ev.k);if(d.ev.k==='ok')sfx.ok();else if(d.ev.k==='bad')sfx.bad();else if(d.ev.k==='key')sfx.key();}
   for(let i=0;i<2;i++){
     const p=S.players[i],r=d.players[i];if(!p||!r)continue;
     p.name=r.name;p.id=r.id;p.keys=r.keys.slice();p.stars=r.stars;p.total=r.total;if(okCar(r.car))p.car=r.car;
@@ -973,7 +976,7 @@ async function robotTurn(){
 async function tell(p,o){if(isBot(p)){showFeed(o.title,'key');await sleep(1700);}else await announce(o);}
 /* keys open a city before you enter it: the first city's key on your first turn,
    then 5 stars in a city earn the key to the next one (after the last city, the castle gate opens) */
-function giveKey(p,n){p.keys.push(n);sfx.key();setTimeout(()=>citySound(n),450);renderNodes();renderPlayers();}
+function giveKey(p,n){p.keys.push(n);sfx.key();renderNodes();renderPlayers();}
 async function enterFirstCity(p){
   const c=CITIES[2];
   giveKey(p,2);
