@@ -41,6 +41,11 @@ img{max-width:100%}
 /* setup */
 .hero{display:grid;gap:10px;justify-items:center;text-align:center;padding-top:6px}
 .hero img.castle{width:min(38vw,210px);filter:drop-shadow(0 6px 0 rgba(22,41,107,.18))}
+/* the game logo sits between Mohammed and Bassam */
+.hero img.logoimg{flex:1;min-width:0;width:100%;max-width:600px;height:auto;align-self:center;filter:drop-shadow(0 6px 0 rgba(22,41,107,.16))}
+.herorow{width:100%;max-width:880px;align-items:center}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media (max-width:600px){.kid img{height:clamp(84px,24vw,140px)}.kid figcaption{font-size:.78rem;padding:0 8px}}
 /* home screen math world: floating numbers, × signs, square arrays and shapes behind the content */
 .setup-s{position:relative}
 .setup-s>*:not(.mathbg){position:relative;z-index:1}

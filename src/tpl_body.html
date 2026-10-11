@@ -5,10 +5,10 @@
     <div class="hero">
       <div class="herorow">
         <figure class="kid k0"><img id="kid0" alt="محمد"><figcaption>محمد</figcaption></figure>
-        <img class="castle" id="heroCastle" alt="قلعة أبطال الضرب">
+        <img class="logoimg" id="heroLogo" alt="مدينة جدول الضرب">
         <figure class="kid k1"><img id="kid1" alt="بسام"><figcaption>بسام</figcaption></figure>
       </div>
-      <h1 class="banner">مدينة جداول الضرب</h1>
+      <h1 class="sr-only">مدينة جداول الضرب</h1>
     </div>
     <div class="setup">
       <div class="panel menu">
@@ -1088,7 +1088,7 @@ $('#rulesBtn').onclick=openRules;$('#rulesBtn0').onclick=openRules;
 $('#rulesClose').onclick=()=>{$('#rulesOv').hidden=true;};
 
 /* ---------- setup wiring ---------- */
-$('#heroCastle').src=IMG.castle;$('#kid0').src=IMG.av0;$('#kid1').src=IMG.av1;
+$('#heroLogo').src=IMG.logo||IMG.castle;$('#kid0').src=IMG.av0;$('#kid1').src=IMG.av1;
 // one character picture has a white paper background: show the cut-out once it is ready
 cutout('av1').then(()=>{if(CUT.av1)$('#kid1').src=CUT.av1;});
 /* home screen: floating numbers, × signs, square arrays and shapes */
