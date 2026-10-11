@@ -276,6 +276,12 @@ img{max-width:100%}
 .choice{background:#fff;border:3px solid var(--ink);border-radius:14px;padding:12px 8px;font-family:var(--f-display);font-weight:800;font-size:1.5rem;direction:ltr;box-shadow:0 4px 0 var(--ink)}
 .choice:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
 .choice.good{background:#C9F2CF}.choice.wrong{background:#FFD3CC}
+/* true/false rows in the lights check */
+.tfrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff;border:3px solid var(--ink);border-radius:14px;padding:6px 10px}
+.tfrow .eq{font-size:1.35rem}
+.tfb{display:flex;gap:6px}
+.tfb .choice{font-family:var(--f-display);font-size:1rem;padding:4px 14px;direction:rtl}
+.card-b .choices{margin-top:4px}
 .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .tile{background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px 0;font-family:var(--f-display);font-weight:800;font-size:1.3rem;box-shadow:0 3px 0 var(--ink);direction:ltr}
 .tile.used{background:#C9F2CF;opacity:.6;box-shadow:none;transform:translateY(3px)}

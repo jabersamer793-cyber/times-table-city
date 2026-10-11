@@ -245,41 +245,86 @@ async function playSnd(k,dur){
 function citySound(n){playSnd('snd'+n).then(ok=>{if(!ok){try{if(CITY_SOUND[n])CITY_SOUND[n]();}catch(e){}}});}
 
 /* ---------- card generation ---------- */
+// button cards (multiple choice, true/false): no keypad; data-ok marks the right button
+function choiceCustom(qHtml,opts,okIdx){
+  return function(el,finish){
+    el.innerHTML=`${qHtml}<div class="choices">${opts.map((o,i)=>`<button type="button" class="choice" data-i="${i}"${i===okIdx?' data-ok="1"':''}>${o}</button>`).join('')}</div>`;
+    $$('.choice',el).forEach(b=>b.onclick=()=>{const i=+b.dataset.i;$$('.choice',el).forEach((x,j)=>{x.disabled=true;if(j===okIdx)x.classList.add('good');});if(i!==okIdx)b.classList.add('wrong');finish(i===okIdx);});
+  };
+}
+// believable wrong answers close to the right one
+function wrongNear(P,n,k,count){
+  const out=new Set();
+  for(const v of shuffle([P+n,P-n,P+1,P-1,n*(k+2),(n+1)*k,P+2,P-2,P+10]))if(v>0&&v!==P){out.add(v);if(out.size>=count)break;}
+  return [...out];
+}
+function mcCard(base,qHtml,P,n,k,ex){
+  const opts=shuffle([P,...wrongNear(P,n,k,3)]);
+  return{...base,custom:choiceCustom(qHtml,opts.map(String),opts.indexOf(P)),explain:ex};
+}
+// short everyday stories: k groups with n in each
+const STORIES=[
+  (n,k)=>`في الصف ${k} صفوف من الكراسي، وفي كل صف ${n} كراسي. كم كرسياً في الصف كله؟`,
+  (n,k)=>`اشترت سلمى ${k} علب، في كل علبة ${n} أقلام تلوين. كم قلماً اشترت؟`,
+  (n,k)=>`في الحديقة ${k} أشجار، وعلى كل شجرة ${n} عصافير. كم عصفوراً على الأشجار؟`,
+  (n,k)=>`في المتجر ${k} صناديق، وفي كل صندوق ${n} برتقالات. كم برتقالة في الصناديق؟`,
+  (n,k)=>`ركب الأولاد ${k} سيارات، وفي كل سيارة ${n} أولاد. كم ولداً ركبوا؟`,
+  (n,k)=>`في المخبز ${k} صوانٍ، وعلى كل صينية ${n} كعكات. كم كعكة في المخبز؟`,
+  (n,k)=>`يقرأ عمر ${n} صفحات كل يوم. كم صفحة يقرأ في ${k} أيام؟`,
+  (n,k)=>`في المزرعة ${k} أعشاش، وفي كل عش ${n} بيضات. كم بيضة في الأعشاش؟`,
+  (n,k)=>`يوفّر سامي ${n} قطع نقدية كل يوم. كم قطعة يوفّر في ${k} أيام؟`,
+  (n,k)=>`في المكتبة ${k} رفوف، وعلى كل رف ${n} كتب. كم كتاباً على الرفوف؟`,
+  (n,k)=>`في الملعب ${k} فرق، وفي كل فريق ${n} لاعبين. كم لاعباً في الملعب؟`,
+  (n,k)=>`زرع جدّي ${k} صفوف من الورد، وفي كل صف ${n} وردات. كم وردة زرع؟`
+];
+const LEGS={2:['عصفور','العصافير'],4:['قطة','القطط'],6:['نملة','النمل'],8:['عنكبوت','العناكب']};
 function genCard(type,n,k,L){
-  const P=n*k, base={type,L,stars:L,n,k,title:TYPES[type].t};
+  const P=n*k, base={type,L,stars:L,n,k,title:TYPES[type].t}, ex=E(`${n} × ${k} = ${P}`);
   if(type==='fill'){
-    const v=pick(L===1?['a']:L===2?['a','b']:['b','c']);
-    const ex=E(`${n} × ${k} = ${P}`);
-    if(v==='a')return{...base,tpl:`<div class="eq big">${n} × ${k} = [[0]]</div>`,fields:[{ans:P}],explain:ex};
+    const v=pick(L===1?['a','swap','mc','tf']:L===2?['a','b','left','mc']:['b','c','left']);
+    if(v==='swap')return{...base,tpl:`<div class="eq big">${k} × ${n} = [[0]]</div>`,fields:[{ans:P}],explain:E(`${k} × ${n} = ${P}`)};
+    if(v==='left')return{...base,tpl:`<div class="eq big">${P} = ${n} × [[0]]</div>`,fields:[{ans:k}],explain:ex};
+    if(v==='mc')return mcCard({...base,instr:'اختر الإجابة الصحيحة'},`<div class="eq big">${n} × ${k} = ؟</div>`,P,n,k,ex);
+    if(v==='tf'){
+      const shown=Math.random()<.5?P:pick(wrongNear(P,n,k,3));
+      return{...base,instr:'هل هذه العملية صحيحة؟',custom:choiceCustom(`<div class="eq big">${n} × ${k} = ${shown}</div>`,['صح','خطأ'],shown===P?0:1),explain:ex};
+    }
     if(v==='b')return{...base,tpl:`<div class="eq big">${n} × [[0]] = ${P}</div>`,fields:[{ans:k}],explain:ex};
-    return{...base,tpl:`<div class="eq big">[[0]] × ${k} = ${P}</div>`,fields:[{ans:n}],explain:ex};
+    if(v==='c')return{...base,tpl:`<div class="eq big">[[0]] × ${k} = ${P}</div>`,fields:[{ans:n}],explain:ex};
+    return{...base,tpl:`<div class="eq big">${n} × ${k} = [[0]]</div>`,fields:[{ans:P}],explain:ex};
   }
   if(type==='complete'){
-    // the next line of the times table: no brackets, just "n × k = ?"
+    // lines of the times table and skip counting: no brackets, just "n × k = ?"
+    const v=pick(L===1?['next','seq']:L===2?['next','prev','gap']:['two','gap','prev']);
     const a=Math.max(1,k-1);
-    if(L<3)return{...base,tpl:`<div class="eq">${n} × ${a} = ${n*a}</div><div class="eq big">${n} × ${k} = [[0]]</div>`,fields:[{ans:P}],explain:E(`${n} × ${k} = ${P}`)};
-    return{...base,tpl:`<div class="eq">${n} × ${a} = ${n*a}</div><div class="eq">${n} × ${k} = [[0]]</div><div class="eq">${n} × ${k+1} = [[1]]</div>`,fields:[{ans:P},{ans:n*(k+1)}],explain:E(`${n} × ${k} = ${P}`)+'  '+E(`${n} × ${k+1} = ${n*(k+1)}`)};
+    if(v==='seq'){const s=Math.max(1,Math.min(k-3,7));const t=[s,s+1,s+2,s+3].map(x=>x*n);
+      return{...base,instr:`عُدّ وأضف ${n} في كل مرة`,tpl:`<div class="eq big">${t[0]} ، ${t[1]} ، ${t[2]} ، [[0]]</div>`,fields:[{ans:t[3]}],explain:E(t.join(' ، '))+` (نضيف ${n} كل مرة)`};}
+    if(v==='gap'){const s=Math.max(1,Math.min(k-2,7));const t=[s,s+1,s+2,s+3].map(x=>x*n);
+      return{...base,instr:'ما العدد الناقص؟',tpl:`<div class="eq big">${t[0]} ، ${t[1]} ، [[0]] ، ${t[3]}</div>`,fields:[{ans:t[2]}],explain:E(t.join(' ، '))};}
+    if(v==='prev'&&k>=3)return{...base,tpl:`<div class="eq">${n} × ${k} = ${P}</div><div class="eq big">${n} × ${k-1} = [[0]]</div>`,fields:[{ans:n*(k-1)}],explain:E(`${n} × ${k-1} = ${n*(k-1)}`)};
+    if(v==='two')return{...base,tpl:`<div class="eq">${n} × ${a} = ${n*a}</div><div class="eq">${n} × ${k} = [[0]]</div><div class="eq">${n} × ${k+1} = [[1]]</div>`,fields:[{ans:P},{ans:n*(k+1)}],explain:ex+'  '+E(`${n} × ${k+1} = ${n*(k+1)}`)};
+    return{...base,tpl:`<div class="eq">${n} × ${a} = ${n*a}</div><div class="eq big">${n} × ${k} = [[0]]</div>`,fields:[{ans:P}],explain:ex};
   }
   if(type==='riddle'){
-    const IT=[{c:'صناديق',ci:'صندوق',w:'البرتقال',q:'برتقالة'},{c:'أكياس',ci:'كيس',w:'التفاح',q:'تفاحة'},{c:'علب',ci:'علبة',w:'الأقلام',q:'قلماً'},{c:'سلال',ci:'سلة',w:'البيض',q:'بيضة'},{c:'رفوف',ci:'رف',w:'الكتب',q:'كتاباً'},{c:'أطباق',ci:'طبق',w:'الكعك',q:'كعكة'}];
-    const kind=pick(L===1?['product','story']:L===2?['story','unknown']:['unknown','between']);
-    let text,ans,ex;
-    const it=pick(IT);
-    if(kind==='product'){text=`أنا ناتج ضرب ${E(n+' × '+k)}. من أنا؟`;ans=P;ex=E(`${n} × ${k} = ${P}`);}
-    else if(kind==='story'){text=`في المتجر ${it.c} عددها ${k}، وفي كل ${it.ci} ${n} من ${it.w}. كم ${it.q} في المتجر كله؟`;ans=P;ex=E(`${n} × ${k} = ${P}`);}
-    else if(kind==='unknown'){text=`ضربتُ عدداً في ${n} فكان الناتج ${P}. ما هذا العدد؟`;ans=k;ex=E(`${n} × ${k} = ${P}`);}
-    else if(kind==='between'){text=`أنا عدد من جدول ${n}، أكبر من ${P-n+1} وأصغر من ${P+n-1}. من أنا؟`;ans=P;ex=E(`${n} × ${k} = ${P}`);}
-    else if(kind==='double'){text=`أنا ضعف ناتج ضرب ${E(n+' × '+k)}. من أنا؟`;ans=2*P;ex=E(`${n} × ${k} = ${P}`)+' ثم '+E(`${P} × 2 = ${2*P}`);}
-    else if(kind==='story2'){const m=rnd(2,Math.min(9,Math.floor(P/2)));text=`في المتجر ${it.c} عددها ${k}، وفي كل ${it.ci} ${n} من ${it.w}. أُخذ منها ${m}. كم ${it.q} بقي؟`;ans=P-m;ex=E(`${n} × ${k} = ${P}`)+' ثم '+E(`${P} − ${m} = ${P-m}`);}
-    else if(kind==='half'){text=`أنا نصف ناتج ضرب ${E(n+' × '+(2*k))}. من أنا؟`;ans=P;ex=E(`${n} × ${2*k} = ${2*P}`)+' ثم نصفه '+E(P);}
-    else if(kind==='twostep'){text=`ضربتُ عدداً في ${n} ثم أضفتُ ${n} فكان الناتج ${P+n}. ما هذا العدد؟`;ans=k;ex=E(`${P+n} − ${n} = ${P}`)+' ثم '+E(`${P} ÷ ${n} = ${k}`);}
-    else {text=`أنا ناتج ${E(n+' × '+k)} بعد أن طرحتُ منه ${n}. من أنا؟`;ans=P-n;ex=E(`${n} × ${k} = ${P}`)+' ثم '+E(`${P} − ${n} = ${P-n}`);}
+    let kind=pick(L===1?['product','story','legs']:L===2?['story','unknown','share']:['unknown','between','story','share']);
+    if(kind==='legs'&&!LEGS[n])kind='story';
+    let text,ans=P;
+    if(kind==='product')text=`أنا ناتج ضرب ${E(n+' × '+k)}. من أنا؟`;
+    else if(kind==='story')text=pick(STORIES)(n,k);
+    else if(kind==='legs'){const a=LEGS[n];text=`لكل ${a[0]} ${n} أرجل. كم رجلاً عند ${k} من ${a[1]}؟`;}
+    else if(kind==='unknown'){text=`ضربتُ عدداً في ${n} فكان الناتج ${P}. ما هذا العدد؟`;ans=k;}
+    else if(kind==='share'){text=`وزّعت المعلّمة ${P} قطعة حلوى على ${n} أطفال بالتساوي. كم قطعة لكل طفل؟`;ans=k;}
+    else text=`أنا عدد من جدول ${n}، أكبر من ${P-n+1} وأصغر من ${P+n-1}. من أنا؟`;
     return{...base,tpl:`<p>${text}</p><div class="eq big">[[0]]</div>`,fields:[{ans}],explain:ex,riddle:kind};
   }
   /* speed */
   const T=S.adv?[10,8,6]:[12,10,8];
-  const flip=L===3&&Math.random()<.4;
-  return{...base,time:T[L-1],tpl:flip?`<div class="eq big">${n} × [[0]] = ${P}</div>`:`<div class="eq big">${n} × ${k} = [[0]]</div>`,fields:[{ans:flip?k:P}],explain:E(`${n} × ${k} = ${P}`)};
+  const v=pick(L===1?['a','swap','mc']:L===2?['a','mc','b']:['a','b']);
+  const sp={...base,time:T[L-1]};
+  if(v==='mc')return mcCard({...sp,instr:'اختر بسرعة'},`<div class="eq big">${n} × ${k} = ؟</div>`,P,n,k,ex);
+  if(v==='swap')return{...sp,tpl:`<div class="eq big">${k} × ${n} = [[0]]</div>`,fields:[{ans:P}],explain:E(`${k} × ${n} = ${P}`)};
+  if(v==='b')return{...sp,tpl:`<div class="eq big">${n} × [[0]] = ${P}</div>`,fields:[{ans:k}],explain:ex};
+  return{...sp,tpl:`<div class="eq big">${n} × ${k} = [[0]]</div>`,fields:[{ans:P}],explain:ex};
 }
 function genDeck(n){
   const mx=S.adv?12:10;
@@ -298,7 +343,8 @@ function nextCard(n){
   return S.decks[n].pop();
 }
 
-/* ---------- maintenance workshop (6 extra challenges) ---------- */
+/* ---------- maintenance workshop (12 extra challenges, dealt without repeats) ---------- */
+const WORK_N=12;
 function buildM(id,n){
   const base={type:'work',work:true,id,stars:1,n};
   if(id===1){const k=rnd(3,9);return{...base,title:'أصلح العطل',instr:'أكمل العملية لإصلاح العطل',tpl:`<div class="eq big">${n} × [[0]] = ${n*k}</div>`,fields:[{ans:k}],explain:E(`${n} × ${k} = ${n*k}`)};}
@@ -316,10 +362,7 @@ function buildM(id,n){
     const items=shuffle([...three.map(p=>({t:`${p[0]} × ${p[1]}`,odd:false})),{t:`${a} × ${b}`,odd:true}]);
     return{...base,title:'فحص المحرك',instr:'أي ناتج مختلف؟ اضغط على العملية المختلفة',
       explain:'ثلاث عمليات ناتجها '+E(P)+' والمختلفة هي '+E(`${a} × ${b} = ${a*b}`),
-      custom(el,finish){
-        el.innerHTML=`<div class="choices">${items.map((it,i)=>`<button type="button" class="choice" data-i="${i}">${it.t}</button>`).join('')}</div>`;
-        $$('.choice',el).forEach(b=>b.onclick=()=>{const it=items[+b.dataset.i];$$('.choice',el).forEach((x,j)=>{x.disabled=true;if(items[j].odd)x.classList.add('good');});if(!it.odd)b.classList.add('wrong');finish(it.odd);});
-      }};}
+      custom:choiceCustom('',items.map(it=>it.t),items.findIndex(it=>it.odd))};}
   if(id===5){
     const prods=Array.from({length:10},(_,i)=>n*(i+1));
     return{...base,title:'إعادة التشغيل',instr:`قل جدول ${n} بالعكس من 10 إلى 1`,explain:E(prods.slice().reverse().join(' ، ')),
@@ -332,11 +375,44 @@ function buildM(id,n){
           };});};
         draw();
       }};}
-  const j=rnd(1,5);const t=[j,j+1,j+2,j+3,j+4].map(x=>x*n);
-  return{...base,title:'الميكانيكي الشاطر',instr:'أكمل النمط',tpl:`<div class="eq big">${t[0]} ، ${t[1]} ، ${t[2]} ، [[0]] ، [[1]]</div>`,fields:[{ans:t[3]},{ans:t[4]}],explain:E(t.join(' ، '))+' (نضيف '+n+' كل مرة)'};
+  if(id===6){const j=rnd(1,5);const t=[j,j+1,j+2,j+3,j+4].map(x=>x*n);
+    return{...base,title:'الميكانيكي الشاطر',instr:'أكمل النمط',tpl:`<div class="eq big">${t[0]} ، ${t[1]} ، ${t[2]} ، [[0]] ، [[1]]</div>`,fields:[{ans:t[3]},{ans:t[4]}],explain:E(t.join(' ، '))+' (نضيف '+n+' كل مرة)'};}
+  if(id===7){const [a,b]=shuffle([2,3,4,5,6,7,8,9]).slice(0,2);
+    return{...base,title:'قطع الغيار',instr:'ركّب القطعتين الناقصتين',tpl:`<div class="eq">${n} × [[0]] = ${n*a}</div><div class="eq">[[1]] × ${n} = ${n*b}</div>`,fields:[{ans:a},{ans:b}],explain:E(`${n} × ${a} = ${n*a}`)+'  '+E(`${b} × ${n} = ${n*b}`)};}
+  if(id===8){const j=rnd(5,10);const t=[j,j-1,j-2,j-3,j-4].map(x=>x*n);
+    return{...base,title:'عدّاد الوقود',instr:`العدّاد ينزل ${n} كل مرة. أكمل`,tpl:`<div class="eq big">${t[0]} ، ${t[1]} ، ${t[2]} ، [[0]] ، [[1]]</div>`,fields:[{ans:t[3]},{ans:t[4]}],explain:E(t.join(' ، '))+' (نطرح '+n+' كل مرة)'};}
+  if(id===9){const k=rnd(3,9),P=n*k;
+    return mcCard({...base,title:'اختر القطعة المناسبة',instr:'أي قطعة تناسب المحرك؟'},`<div class="eq big">${n} × ${k} = ؟</div>`,P,n,k,E(`${n} × ${k} = ${P}`));}
+  if(id===10){
+    // three statements; all must be marked right
+    const rows=shuffle([3,4,5,6,7,8,9]).slice(0,3).map(k=>{const P=n*k,ok=Math.random()<.5;return{k,P,shown:ok?P:pick(wrongNear(P,n,k,3)),ok};});
+    return{...base,title:'فحص الأضواء',instr:'أي العمليات صحيحة وأيها خطأ؟',explain:rows.map(r=>E(`${n} × ${r.k} = ${r.P}`)).join('  '),
+      custom(el,finish){
+        el.innerHTML=rows.map((r,i)=>`<div class="tfrow"><span class="eq">${n} × ${r.k} = ${r.shown}</span><span class="tfb"><button type="button" class="choice" data-r="${i}" data-v="1"${r.ok?' data-ok="1"':''}>صح</button><button type="button" class="choice" data-r="${i}" data-v="0"${r.ok?'':' data-ok="1"'}>خطأ</button></span></div>`).join('');
+        const got=[];
+        $$('.choice',el).forEach(b=>b.onclick=()=>{const i=+b.dataset.r;if(got[i]!==undefined)return;got[i]=(b.dataset.v==='1')===rows[i].ok;
+          $$(`.choice[data-r="${i}"]`,el).forEach(x=>{x.disabled=true;if(x.dataset.ok)x.classList.add('good');});if(!got[i])b.classList.add('wrong');
+          if(!got[i]){$$('.choice',el).forEach(x=>{x.disabled=true;if(x.dataset.ok)x.classList.add('good');});finish(false);return;}
+          if(got.filter(g=>g!==undefined).length===rows.length)finish(true);});
+      }};}
+  if(id===11){
+    // tap all the numbers from this table
+    const ins=shuffle([2,3,4,5,6,7,8,9]).slice(0,4).map(k=>n*k);const outs=new Set();
+    while(outs.size<4){const v=rnd(5,n*10);if(v%n!==0)outs.add(v);}
+    const nums=shuffle([...ins,...outs]);
+    return{...base,title:'براغي الجدول',instr:`اضغط على كل الأعداد من جدول ${n}`,explain:'أعداد جدول '+n+': '+E(ins.slice().sort((a,b)=>a-b).join(' ، ')),
+      custom(el,finish){
+        el.innerHTML=`<div class="tiles">${nums.map(v=>`<button type="button" class="tile choice" data-v="${v}"${v%n===0?' data-ok="1"':''}>${v}</button>`).join('')}</div>`;
+        let found=0;
+        $$('.tile',el).forEach(b=>b.onclick=()=>{const v=+b.dataset.v;b.disabled=true;
+          if(v%n===0){b.classList.add('used');tone(520,.08,0,'sine',.08);if(++found===ins.length)finish(true);}
+          else{b.classList.add('wrong');$$('.tile',el).forEach(x=>{x.disabled=true;if(x.dataset.ok)x.classList.add('good');});finish(false);}});
+      }};}
+  const k=rnd(3,9);
+  return{...base,title:'مسألة الميكانيكي',instr:'احسب البراغي',tpl:`<p>يركّب الميكانيكي ${n} براغي في كل عجلة. كم برغياً يحتاج لـ ${k} عجلات؟</p><div class="eq big">[[0]]</div>`,fields:[{ans:n*k}],explain:E(`${n} × ${k} = ${n*k}`)};
 }
 function nextM(n){
-  if(!S.mdeck.length)S.mdeck=shuffle([1,2,3,4,5,6]);
+  if(!S.mdeck.length)S.mdeck=shuffle(Array.from({length:WORK_N},(_,i)=>i+1));
   return buildM(S.mdeck.pop(),n);
 }
 
@@ -382,7 +458,7 @@ function showCard(card,flipped){
     const cb=$('#cb'),cf=$('#cf');
     let vals=(card.fields||[]).map(()=>''),active=0,done=false,raf=0,t0=0;
     const instr=card.instr?`<p class="instr">${card.instr}</p>`:'';
-    const icon=work?`<img class="micon" src="${IMG['m'+card.id]}" alt="">`:'';
+    const icon=work?`<img class="micon" src="${IMG['m'+(((card.id-1)%6)+1)]}" alt="">`:'';
 
     function paint(){
       $$('.fld',cb).forEach(b=>{const i=+b.dataset.i;b.textContent=vals[i]||'؟';b.classList.toggle('on',!done&&i===active);b.classList.toggle('empty',!vals[i]);});
@@ -1085,7 +1161,7 @@ $('#rulesBody').innerHTML=[
 ['بطاقات المدن','في كل مدينة 15 بطاقة سؤال. للبطاقات ثلاثة مستويات: نجمة واحدة (سهلة)، نجمتان (متوسطة)، ثلاث نجوم (صعبة). وتتنوع التحديات بين: تحدي السرعة، لغز، أكمل الجدول، أكمل الفراغ.'],
 ['نظام النجوم','عند الإجابة الصحيحة يحصل اللاعب على النجوم الموجودة على البطاقة. لا تدخل السيارة مدينة إلا بمفتاحها: في أول دور يأخذ كل لاعب مفتاح حديقة الألعاب ويدخلها. وفي كل مدينة، 5 نجوم تعطي مفتاح المدينة التالية فتنطلق السيارة إليها، ويبدأ عدّ النجوم من جديد. وفي آخر مدينة تفتح 5 نجوم بوابة القلعة.'],
 ['نظام الأدوار','كل دور بطاقة واحدة فقط. بعد الإجابة ينتهي الدور وينتقل اللعب إلى اللاعب الآخر، حتى لو كانت البطاقة سهلة.'],
-['ورشة الصيانة','توجد 3 محطات ورشة صيانة على الطريق. عند وصول السيارة إليها يسحب اللاعب بطاقة من صندوق يحتوي على 6 تحديات إضافية. إذا نجح يحصل على نجمة إضافية تُحسب له في المدينة التالية.'],
+['ورشة الصيانة','توجد 3 محطات ورشة صيانة على الطريق. عند وصول السيارة إليها يسحب اللاعب بطاقة من صندوق يحتوي على 12 تحدياً مختلفاً، ولا يتكرر التحدي حتى تُستعمل كلها. إذا نجح يحصل على نجمة إضافية تُحسب له في المدينة التالية.'],
 ['الساعة الرملية','تُستخدم مع تحديات السرعة (وتحديات الصيانة المؤقتة) لتحديد الوقت المسموح للإجابة.'],
 ['الأصوات','تسجيلات حقيقية من مكتبة Big Sound Bank (رخصة CC0). صوت الإسعاف: Demircimehmed على ويكيميديا كومنز، برخصة CC BY-SA 4.0.'],
 ['نهاية اللعبة','عند وصول أحد اللاعبين إلى قلعة أبطال الضرب يحصل اللاعب الآخر على دورة أخيرة، ثم تُحدد النتيجة حسب التقدم والنجوم.']
