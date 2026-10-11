@@ -29,3 +29,7 @@
 - `src/tpl_body.html`: الصفحة ومنطق اللعبة.
 - `src/img/assets.json`: الصور.
 - `src/build.ps1`: يعيد بناء `index.html` بعد أي تعديل على ملفات `src`.
+
+## الأصوات
+
+أصوات المدن وصوت السيارة تسجيلات حقيقية من [Big Sound Bank](https://bigsoundbank.com) برخصة CC0 (ملكية عامة)، مقصوصة إلى ثوانٍ قليلة.

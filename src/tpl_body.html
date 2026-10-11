@@ -213,7 +213,36 @@ const CITY_SOUND={
   // bank: cash register "ka-ching" and coins
   9(){noise(0,.12,.12,'bandpass',900,1.5);bell(2093,.12,1,.12);for(let i=0;i<8;i++)bell(2600+Math.random()*1400,.35+i*.07+Math.random()*.03,.25,.04);}
 };
-function citySound(n){try{if(CITY_SOUND[n])CITY_SOUND[n]();}catch(e){}}
+/* real recordings (CC0, bigsoundbank.com), cut to a few seconds; decoded once and played through a limiter.
+   The made-up sounds above stay as a fallback if a recording cannot be decoded. */
+const SND_GAIN={snd2:1.2,snd3:2,snd4:1.5,snd5:1.4,snd6:.5,snd7:.8,snd8:.5,snd9:2,sndCar:.45};
+const SNDBUF={};let LIMIT=null;
+function sndOut(a){
+  if(!LIMIT){LIMIT=a.createDynamicsCompressor();LIMIT.threshold.value=-12;LIMIT.knee.value=6;LIMIT.ratio.value=8;LIMIT.attack.value=.003;LIMIT.release.value=.2;LIMIT.connect(a.destination);}
+  return LIMIT;
+}
+function sndBuf(a,k){
+  if(!IMG[k])return Promise.resolve(null);
+  if(!SNDBUF[k])SNDBUF[k]=new Promise((ok)=>{
+    try{const bin=atob(IMG[k].split(',')[1]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+      a.decodeAudioData(u.buffer,ok,()=>ok(null));}catch(e){ok(null);}
+  });
+  return SNDBUF[k];
+}
+// play a recording; with dur it is held (looped if needed) for that long and faded out
+async function playSnd(k,dur){
+  const a=actx();if(!a)return true;
+  const buf=await sndBuf(a,k);if(!buf)return false;
+  const s=a.createBufferSource(),g=a.createGain(),v=SND_GAIN[k]||1,st=a.currentTime;
+  s.buffer=buf;g.gain.setValueAtTime(v,st);
+  if(dur){
+    if(dur>buf.duration-.2){s.loop=true;s.loopStart=.3;s.loopEnd=Math.max(.6,buf.duration-.4);}
+    g.gain.setValueAtTime(v,st+Math.max(0,dur-.35));g.gain.linearRampToValueAtTime(.0001,st+dur);
+  }
+  s.connect(g);g.connect(sndOut(a));s.start(st);if(dur)s.stop(st+dur+.05);
+  return true;
+}
+function citySound(n){playSnd('snd'+n).then(ok=>{if(!ok){try{if(CITY_SOUND[n])CITY_SOUND[n]();}catch(e){}}});}
 
 /* ---------- card generation ---------- */
 function genCard(type,n,k,L){
@@ -614,9 +643,12 @@ function placeCars(){
   });
 }
 async function movePawn(p,to){
+  // a real car engine accelerating while the car drives along the road
+  const steps=to-p.pos;let engine=false;
+  if(steps>0)playSnd('sndCar',steps*.9+.25).then(ok=>{engine=ok;});
   while(p.pos<to){
     p.hd=heading(p.pos);placeCars();await sleep(200);
-    p.pos++;placeCars();renderPlayers();sfx.step();await sleep(700);
+    p.pos++;placeCars();renderPlayers();if(!engine)sfx.step();await sleep(700);
   }
   p.hd=null;placeCars();
 }
