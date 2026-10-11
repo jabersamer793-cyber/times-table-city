@@ -215,7 +215,7 @@ const CITY_SOUND={
 };
 /* real recordings (CC0, bigsoundbank.com), cut to a few seconds; decoded once and played through a limiter.
    The made-up sounds above stay as a fallback if a recording cannot be decoded. */
-const SND_GAIN={snd2:.7,snd3:.85,snd4:1,snd5:1.4,snd6:.65,snd7:.8,snd8:.5,snd9:2,sndCar:.45,sndWork:1.2,sndWin:1.6};
+const SND_GAIN={snd2:3,snd3:.85,snd4:1,snd5:1.4,snd6:.65,snd7:.8,snd8:.5,snd9:2,sndCar:.45,sndWork:1.2,sndWin:1.6};
 const SNDBUF={};let LIMIT=null;
 function sndOut(a){
   if(!LIMIT){LIMIT=a.createDynamicsCompressor();LIMIT.threshold.value=-12;LIMIT.knee.value=6;LIMIT.ratio.value=8;LIMIT.attack.value=.003;LIMIT.release.value=.2;LIMIT.connect(a.destination);}
