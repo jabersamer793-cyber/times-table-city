@@ -367,7 +367,7 @@ img{max-width:100%}
     <div class="setup">
       <div class="panel menu">
         <div class="mrow"><span class="mlab">طريقة اللعب</span>
-          <div class="seg"><button class="segb" id="mdLocal" type="button" aria-pressed="true">جهاز واحد</button><button class="segb" id="mdOnline" type="button" aria-pressed="false">أونلاين</button></div></div>
+          <div class="seg"><button class="segb" id="mdLocal" type="button" aria-pressed="true">لاعبان</button><button class="segb" id="mdRobot" type="button" aria-pressed="false">ضد الروبوت</button><button class="segb" id="mdOnline" type="button" aria-pressed="false">أونلاين</button></div></div>
         <div class="mrow"><span class="mlab">المستوى</span>
           <div class="seg"><button class="segb" id="lv0" type="button" aria-pressed="true">7 إلى 10 سنوات</button><button class="segb" id="lv1" type="button" aria-pressed="false">11 إلى 14 سنة</button></div></div>
         <p class="note" id="lvNote" hidden>في اللعب أونلاين يختار المستوى من ينشئ اللعبة.</p>
@@ -1003,7 +1003,8 @@ function renderDeck(){
   b.setAttribute('aria-label',my?'اسحب بطاقة':'دور '+p.name);
   // no label box: tap the cards themselves; a small line beside them says whose turn it is
   const who=OL.on&&my?'دورك':'دور '+esc(p.name);
-  b.innerHTML=pile+`<span class="dturn"><span class="dcar">${carSide(PC[S.turn],PCD[S.turn])}</span><b>${who}</b><small>${my?'اضغط على البطاقات':'انتظر دورك'}</small></span>`;
+  const wait=S.robot&&S.turn===1?'الروبوت يفكّر…':'انتظر دورك';
+  b.innerHTML=pile+`<span class="dturn"><span class="dcar">${carSide(PC[S.turn],PCD[S.turn])}</span><b>${who}</b><small>${my?'اضغط على البطاقات':wait}</small></span>`;
 }
 function renderAll(){renderNodes();placeCars();renderPlayers();renderDeck();}
 
@@ -1012,7 +1013,8 @@ const OL={on:false,code:'',seat:0,ref:null,unsub:null,rev:0,round:0,waiting:fals
 let MYID='';
 try{MYID=localStorage.getItem('mtc-id')||'';if(!MYID){MYID=Math.random().toString(36).slice(2,12);localStorage.setItem('mtc-id',MYID);}}catch(e){MYID=Math.random().toString(36).slice(2,12);}
 const dbP=(window.claude&&typeof window.claude.use==='function')?Promise.resolve(window.claude.use('db')).catch(()=>null):Promise.resolve(null);
-const mine=()=>!OL.on||S.turn===OL.seat;
+// is it this device's turn? (online: my seat; against the robot: never the robot's turn)
+const mine=()=>OL.on?S.turn===OL.seat:!(S.robot&&S.turn===1);
 function stateBody(ev){
   return{v:1,status:S.over?'over':'play',round:OL.round,rev:OL.rev,adv:S.adv,turn:S.turn,endAfter:S.endAfter,
     players:S.players.map(p=>({name:p.name,id:p.id||'',car:p.car,pos:p.pos,stars:p.stars,total:p.total,keys:p.keys.slice()})),ev:ev||null,at:Date.now()};
@@ -1185,7 +1187,7 @@ async function applyRemote(d){
   if(d.status==='play'&&d.turn===OL.seat&&d.ev&&d.ev.k==='turn'){sfx.horn();showFeed('دورك الآن! اسحب بطاقة','turn');}
 }
 function enterOnline(d){
-  S.adv=!!d.adv;S.names=d.players.map(p=>p?p.name:'');
+  S.robot=false;S.adv=!!d.adv;S.names=d.players.map(p=>p?p.name:'');
   const cars=applyColors([d.players[0].car,d.players[1]&&d.players[1].car]);
   S.players=d.players.map((r,i)=>({idx:i,name:r.name,id:r.id,car:cars[i],pos:r.pos,stars:r.stars,total:r.total,keys:r.keys.slice(),hd:null}));
   S.turn=d.turn;S.endAfter=d.endAfter;S.over=false;S.busy=false;S.decks={};S.mdeck=[];
@@ -1265,19 +1267,46 @@ async function onDraw(){
   if(p.stars>=5)await unlockAndMove(p);
   await endTurn();
 }
+/* the robot plays its own turn: draws a card, "thinks", and is right more often on easy cards */
+const isBot=p=>S.robot&&p.idx===1;
+const ROBOT_HIT={1:.85,2:.7,3:.55};
+async function robotTurn(){
+  if(!S.robot||S.over||S.turn!==1)return;
+  S.busy=true;renderDeck();
+  const p=S.players[1],nd=NODES[p.pos];
+  await sleep(800);
+  const card=nextCard(nd.n);
+  showFeed(`الروبوت يحل بطاقة «${card.title}» (${card.stars===1?'نجمة':card.stars===2?'نجمتان':'3 نجوم'})… يفكّر`,'card');
+  await sleep(1900);
+  const ok=Math.random()<ROBOT_HIT[card.stars];
+  ok?sfx.ok():sfx.bad();
+  if(ok){p.stars+=card.stars;p.total+=card.stars;}
+  renderPlayers();
+  showFeed(ok?`أجاب الروبوت إجابة صحيحة وحصل على ${card.stars===1?'نجمة':card.stars===2?'نجمتين':'3 نجوم'}`:'أخطأ الروبوت هذه المرة',ok?'ok':'bad');
+  await sleep(1500);
+  if(p.stars>=5)await unlockAndMove(p);
+  await endTurn();
+}
+// big pop-up for a person; just a short message for the robot so play keeps flowing
+async function tell(p,o){if(isBot(p)){showFeed(o.title,'key');await sleep(1700);}else await announce(o);}
 async function unlockAndMove(p){
   const n=NODES[p.pos].n,c=CITIES[n];
   p.keys.push(n);sfx.key();setTimeout(()=>citySound(n),450);renderNodes();renderPlayers();
-  await announce({img:IMG[c.key],cls:'spin',title:`مفتاح ${c.name}`,text:`جمع ${esc(p.name)} 5 نجوم وحصل على المفتاح. الطريق إلى المحطة التالية صار مفتوحاً!`,btn:'انطلق بالسيارة'});
+  await tell(p,{img:IMG[c.key],cls:'spin',title:`مفتاح ${c.name}`,text:`جمع ${esc(p.name)} 5 نجوم وحصل على المفتاح. الطريق إلى المحطة التالية صار مفتوحاً!`,btn:'انطلق بالسيارة'});
   p.stars=0;
   await movePawn(p,p.pos+1);
   sync({t:`${p.name} حصل على مفتاح ${c.name} وانطلق بسيارته`,k:'key',n});
   let bonus=false;
   if(NODES[p.pos].t==='work'){
     renderPlayers();
-    await announce({img:IMG.workBanner,title:'ورشة الصيانة',text:`وصلت سيارة ${esc(p.name)} إلى ورشة الصيانة! اسحب بطاقة من صندوق التحديات، والنجاح يمنحك نجمة إضافية.`,btn:'اسحب بطاقة'});
-    const r=await showCard(nextM(n));
-    bonus=r.ok;
+    if(isBot(p)){
+      showFeed('الروبوت في ورشة الصيانة يحل تحدياً…','card');await sleep(1800);
+      bonus=Math.random()<.6;bonus?sfx.ok():sfx.bad();
+    }else{
+      await announce({img:IMG.workBanner,title:'ورشة الصيانة',text:`وصلت سيارة ${esc(p.name)} إلى ورشة الصيانة! اسحب بطاقة من صندوق التحديات، والنجاح يمنحك نجمة إضافية.`,btn:'اسحب بطاقة'});
+      const r=await showCard(nextM(n));
+      bonus=r.ok;
+    }
     await movePawn(p,p.pos+1);
     if(bonus){p.stars=1;p.total+=1;}
     sync({t:bonus?`${p.name} نجح في ورشة الصيانة وحصل على نجمة إضافية`:`${p.name} خرج من ورشة الصيانة`,k:bonus?'ok':'info'});
@@ -1297,6 +1326,7 @@ async function endTurn(){
   if(S.endAfter===S.turn){return gameOver(false);}
   S.turn=1-S.turn;S.busy=false;renderAll();
   sync({t:`انتهى الدور. الآن دور ${S.players[S.turn].name}`,k:'turn'});
+  if(S.robot&&S.turn===1)setTimeout(robotTurn,600);
 }
 function rank(){
   const [a,b]=S.players;
@@ -1349,7 +1379,8 @@ function showSetup(){$('#game').hidden=true;$('#setup').hidden=false;window.scro
 /* ---------- rules ---------- */
 $('#rulesBody').innerHTML=[
 ['فكرة اللعبة','لعبة تعليمية تفاعلية لمراجعة وحفظ جداول الضرب بطريقة ممتعة من خلال رحلة بالسيارة بين المدن والتحديات.'],
-['عدد اللاعبين','لاعبان: السيارة الزرقاء والسيارة الخضراء. يمكن اللعب على الجهاز نفسه بالتناوب، أو أونلاين كل لاعب من جهازه.'],
+['عدد اللاعبين','لاعبان، لكل واحد سيارة يختار لونها. يمكن اللعب على الجهاز نفسه بالتناوب، أو وحدك ضد الروبوت، أو أونلاين كل لاعب من جهازه.'],
+['ضد الروبوت','يلعب الروبوت دوره وحده: يسحب بطاقة ويفكّر ثم يجيب. يصيب غالباً في البطاقات السهلة ويخطئ أكثر في الصعبة، فتستطيع أن تسبقه إلى القلعة.'],
 ['اللعب أونلاين','ينشئ أحد اللاعبين لعبة فيظهر له رمز من 4 أرقام، ويكتبه الآخر في «انضم». أو يرسل له رابط الدعوة فيدخل مباشرة. يرى كل لاعب حركة سيارة صديقه ونتائجه مباشرة، وإذا أُغلقت الصفحة يرجع اللاعب بزر «العودة إلى لعبتي».'],
 ['مسار اللعبة','تسير السيارتان على الشارع عبر 8 مدن تمثل جداول الضرب من 2 إلى 9، وفي نهاية الطريق توجد قلعة أبطال الضرب.'],
 ['بطاقات المدن','في كل مدينة 15 بطاقة سؤال. للبطاقات ثلاثة مستويات: نجمة واحدة (سهلة)، نجمتان (متوسطة)، ثلاث نجوم (صعبة). وتتنوع التحديات بين: تحدي السرعة، لغز، أكمل الجدول، أكمل الفراغ.'],
@@ -1389,9 +1420,9 @@ function setLevel(a){S.adv=a;$('#lv0').setAttribute('aria-pressed',String(!a));$
 $('#lv0').onclick=()=>setLevel(false);$('#lv1').onclick=()=>setLevel(true);
 let MODE='local';
 function setMode(m){
-  MODE=m;const on=m==='online';
-  $('#mdLocal').setAttribute('aria-pressed',String(!on));$('#mdOnline').setAttribute('aria-pressed',String(on));
-  $('#n1box').hidden=on;$('#whoH').textContent=on?'اسمك وسيارتك':'اللاعبون';renderSwatches();
+  MODE=m;const on=m==='online',bot=m==='robot';
+  $('#mdLocal').setAttribute('aria-pressed',String(m==='local'));$('#mdRobot').setAttribute('aria-pressed',String(bot));$('#mdOnline').setAttribute('aria-pressed',String(on));
+  $('#n1box').hidden=on;$('#n1').hidden=bot;$('#whoH').textContent=on?'اسمك وسيارتك':bot?'أنت والروبوت':'اللاعبون';renderSwatches();
   $('#onlineBox').hidden=!on;$('#startBtn').hidden=on;$('#lvNote').hidden=!on;olMsg('');
   try{localStorage.setItem('mtc-mode',m);}catch(e){}
   refreshResume();
@@ -1405,11 +1436,12 @@ function renderSwatches(){
     $$('.sw',box).forEach(b=>b.onclick=()=>{CHOICE[p]=+b.dataset.i;try{localStorage.setItem('mtc-cars',JSON.stringify(CHOICE));}catch(e){}renderSwatches();});
   });
   const dot=i=>`<i class="dot" style="background:${CARS[CHOICE[i]].c}"></i>`;
-  $('#n0lab').innerHTML=dot(0)+(online?'اسمك':'اللاعب الأول')+' · السيارة '+CARS[CHOICE[0]].n;
-  $('#n1lab').innerHTML=dot(1)+'اللاعب الثاني · السيارة '+CARS[CHOICE[1]].n;
+  const bot=MODE==='robot';
+  $('#n0lab').innerHTML=dot(0)+(online||bot?'اسمك':'اللاعب الأول')+' · السيارة '+CARS[CHOICE[0]].n;
+  $('#n1lab').innerHTML=dot(1)+(bot?'الروبوت':'اللاعب الثاني')+' · السيارة '+CARS[CHOICE[1]].n;
 }
 function refreshResume(){const s=loadSession();$('#resumeRow').hidden=!(s&&s.code&&MODE==='online');if(s&&s.code)$('#resumeBtn').textContent='العودة إلى لعبتي (الرمز '+s.code+')';}
-$('#mdLocal').onclick=()=>setMode('local');$('#mdOnline').onclick=()=>setMode('online');
+$('#mdLocal').onclick=()=>setMode('local');$('#mdRobot').onclick=()=>setMode('robot');$('#mdOnline').onclick=()=>setMode('online');
 $('#hostBtn').onclick=hostGame;
 $('#joinBtn').onclick=()=>joinGame($('#joinCode').value,false);
 $('#joinCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();joinGame($('#joinCode').value,false);}});
@@ -1419,7 +1451,8 @@ try{const sv=JSON.parse(localStorage.getItem('mtc-names')||'null');if(sv){$('#n0
 const saveNames=()=>{try{localStorage.setItem('mtc-names',JSON.stringify([$('#n0').value.trim(),$('#n1').value.trim()]));}catch(e){}};
 $('#n0').addEventListener('change',saveNames);$('#n1').addEventListener('change',saveNames);
 $('#startBtn').onclick=()=>{
-  S.names=[$('#n0').value.trim()||'اللاعب الأول',$('#n1').value.trim()||'اللاعب الثاني'];
+  S.robot=MODE==='robot';
+  S.names=[$('#n0').value.trim()||'اللاعب الأول',S.robot?'الروبوت':($('#n1').value.trim()||'اللاعب الثاني')];
   if(S.names[0]===S.names[1])S.names[1]+=' 2';
   saveNames();
   startGame();
