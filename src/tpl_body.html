@@ -172,6 +172,49 @@ const sfx={
   win(){[523,659,784,1047,784,1047,1319].forEach((f,i)=>tone(f,.24,i*.12,'triangle'))}
 };
 
+/* ---------- city sounds, played when a player wins that city's key (all made with Web Audio, no files) ---------- */
+function actx(){if(!S.sound)return null;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC;}catch(e){return null;}}
+// a held note whose pitch follows points [[seconds,Hz],...]
+function glide(type,pts,t,dur,vol){
+  const a=actx();if(!a)return;
+  const o=a.createOscillator(),g=a.createGain(),st=a.currentTime+t;
+  o.type=type;o.frequency.setValueAtTime(pts[0][1],st);pts.slice(1).forEach(([dt,f])=>o.frequency.linearRampToValueAtTime(f,st+dt));
+  g.gain.setValueAtTime(.0001,st);g.gain.exponentialRampToValueAtTime(vol,st+.03);g.gain.setValueAtTime(vol,st+Math.max(.04,dur-.08));g.gain.exponentialRampToValueAtTime(.0001,st+dur);
+  o.connect(g);g.connect(a.destination);o.start(st);o.stop(st+dur+.05);
+}
+// filtered noise: sizzle, steam, hiss
+function noise(t,dur,vol,ftype,freq,q){
+  const a=actx();if(!a)return;
+  const n=Math.floor(a.sampleRate*dur),b=a.createBuffer(1,n,a.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=Math.random()*2-1;
+  const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain(),st=a.currentTime+t;
+  s.buffer=b;f.type=ftype;f.frequency.value=freq;f.Q.value=q||1;
+  g.gain.setValueAtTime(.0001,st);g.gain.exponentialRampToValueAtTime(vol,st+.06);g.gain.exponentialRampToValueAtTime(.0001,st+dur);
+  s.connect(f);f.connect(g);g.connect(a.destination);s.start(st);s.stop(st+dur);
+}
+// a struck metal bell: fundamental plus bright partials that fade fast
+function bell(f,t,dur,vol){[[1,1],[2.76,.45],[5.4,.22],[8.93,.1]].forEach(([m,v],i)=>tone(f*m,dur/(1+i*.7),t,'sine',vol*v));}
+const CITY_SOUND={
+  // playground: children's "wheee!" glides and giggles
+  2(){[[0,520,1250],[.35,600,1400],[.75,480,1150]].forEach(([t,a,b])=>glide('triangle',[[0,a],[.28,b],[.4,b*.85]],t,.42,.1));
+    for(let i=0;i<6;i++)glide('sine',[[0,980-i*25],[.06,760-i*25]],1.15+i*.11,.08,.08);},
+  // pizza kitchen: oven sizzle, then the "order ready" desk bell twice
+  3(){noise(0,1.3,.07,'highpass',4200,.7);bell(1318,.55,1.1,.1);bell(1318,1.05,1.3,.1);},
+  // café: espresso steam, a few bubbles, a cup clink
+  4(){noise(0,1.1,.06,'bandpass',2600,.6);for(let i=0;i<7;i++)glide('sine',[[0,280+i*40],[.05,420+i*30]],.15+i*.12,.06,.05);bell(2640,1.2,.5,.08);bell(3150,1.32,.45,.06);},
+  // school: the electric class bell
+  5(){for(let i=0;i<26;i++){tone(1046,.09,i*.06,'square',.03);tone(2093,.06,i*.06,'sine',.03);}},
+  // hospital: ambulance two-tone siren
+  6(){for(let i=0;i<4;i++){glide('square',[[0,960]],i*.9,.45,.035);glide('square',[[0,770]],i*.9+.45,.45,.035);}},
+  // fire station: rising and falling wail, then the truck horn
+  7(){glide('sawtooth',[[0,520],[.8,1250],[1.6,520]],0,1.6,.035);glide('sawtooth',[[0,220]],1.65,.45,.05);glide('sawtooth',[[0,277]],1.65,.45,.04);},
+  // police: fast "yelp" siren
+  8(){for(let i=0;i<9;i++)glide('square',[[0,700],[.17,1500]],i*.19,.19,.03);},
+  // bank: cash register "ka-ching" and coins
+  9(){noise(0,.12,.12,'bandpass',900,1.5);bell(2093,.12,1,.12);for(let i=0;i<8;i++)bell(2600+Math.random()*1400,.35+i*.07+Math.random()*.03,.25,.04);}
+};
+function citySound(n){try{if(CITY_SOUND[n])CITY_SOUND[n]();}catch(e){}}
+
 /* ---------- card generation ---------- */
 function genCard(type,n,k,L){
   const P=n*k, base={type,L,stars:L,n,k,title:TYPES[type].t};
@@ -774,7 +817,7 @@ function onRemote(snap){
   OL.apply=OL.apply.then(()=>applyRemote(d)).catch(()=>{});
 }
 async function applyRemote(d){
-  if(d.ev&&d.ev.t){showFeed(d.ev.t,d.ev.k);if(d.ev.k==='ok')sfx.ok();else if(d.ev.k==='bad')sfx.bad();else if(d.ev.k==='key')sfx.key();}
+  if(d.ev&&d.ev.t){showFeed(d.ev.t,d.ev.k);if(d.ev.k==='ok')sfx.ok();else if(d.ev.k==='bad')sfx.bad();else if(d.ev.k==='key'){sfx.key();if(d.ev.n)setTimeout(()=>citySound(d.ev.n),450);}}
   for(let i=0;i<2;i++){
     const p=S.players[i],r=d.players[i];if(!p||!r)continue;
     p.name=r.name;p.id=r.id;p.keys=r.keys.slice();p.stars=r.stars;p.total=r.total;if(okCar(r.car))p.car=r.car;
@@ -868,11 +911,11 @@ async function onDraw(){
 }
 async function unlockAndMove(p){
   const n=NODES[p.pos].n,c=CITIES[n];
-  p.keys.push(n);sfx.key();renderNodes();renderPlayers();
+  p.keys.push(n);sfx.key();setTimeout(()=>citySound(n),450);renderNodes();renderPlayers();
   await announce({img:IMG[c.key],cls:'spin',title:`مفتاح ${c.name}`,text:`جمع ${esc(p.name)} 5 نجوم وحصل على المفتاح. الطريق إلى المحطة التالية صار مفتوحاً!`,btn:'انطلق بالسيارة'});
   p.stars=0;
   await movePawn(p,p.pos+1);
-  sync({t:`${p.name} حصل على مفتاح ${c.name} وانطلق بسيارته`,k:'key'});
+  sync({t:`${p.name} حصل على مفتاح ${c.name} وانطلق بسيارته`,k:'key',n});
   let bonus=false;
   if(NODES[p.pos].t==='work'){
     renderPlayers();
