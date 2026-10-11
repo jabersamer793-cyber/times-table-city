@@ -875,14 +875,16 @@ function scenery(){
   const onNode=(x,y)=>NODES.some((nd,i)=>{const p=npos(i),c=nd.t==='castle',hw=c?12:8.6,top=c?25:17;return Math.abs(x-p.x)<hw&&y>p.y-top&&y<p.y+6;});
   const onDeck=(x,y)=>x>26&&y>88;
   const placed=[],out=[];
-  const free=(x,y,r)=>x>r+.5&&x<99.5-r&&y>r+1&&y<BH-1&&dRoad(x,y)>7.8+r&&!onNode(x,y)&&!onDeck(x,y)&&placed.every(([a,b,c])=>Math.hypot(a-x,b-y)>c+r);
-  const scatter=(kind,n,r,tries)=>{let k=0;for(let t=0;t<tries&&k<n;t++){const x=R()*100,y=R()*BH;if(free(x,y,r)){placed.push([x,y,r]);out.push({k:kind,x,y,v:R()});k++;}}};
-  scatter('house',8,4.3,900);
-  scatter('pond',1,5.5,600);
-  scatter('tree',70,2.1,4000);
-  scatter('pine',22,1.8,3000);
-  scatter('bush',40,1.1,3000);
-  scatter('flower',30,.7,3000);
+  // gap: how far from the road edge an item must stand; space: extra room around each one so they spread out
+  const free=(x,y,r,gap,space)=>x>r+.5&&x<99.5-r&&y>r+1&&y<BH-1&&dRoad(x,y)>gap+r&&!onNode(x,y)&&!onDeck(x,y)&&placed.every(([a,b,c])=>Math.hypot(a-x,b-y)>c+r+space);
+  const scatter=(kind,n,r,tries,gap,space)=>{let k=0;for(let t=0;t<tries&&k<n;t++){const x=R()*100,y=R()*BH;if(free(x,y,r,gap,space)){placed.push([x,y,r]);out.push({k:kind,x,y,v:R()});k++;}}};
+  scatter('house',8,4.3,900,7.8,0);
+  scatter('pond',1,5.5,600,8.5,0);
+  // fewer trees, kept back from the road and spread out
+  scatter('tree',26,2.1,5000,10,2.5);
+  scatter('pine',10,1.8,4000,10,2.5);
+  scatter('bush',14,1.1,4000,9,1.5);
+  scatter('flower',20,.7,4000,8.5,1);
   // street furniture sits on the sidewalk, right at the curb
   NODES.forEach((nd,i)=>{if(nd.t!=='city')return;const p=npos(i);out.push({k:'light',x:p.x+9.2,y:p.y-6.6});});
   segs.forEach(([a,b],i)=>{if(a.y!==b.y)return;for(const f of [.33,.67]){const x=a.x+(b.x-a.x)*f;out.push({k:'lamp',x,y:a.y+(i%2?-5.6:6.4)});}});
