@@ -1,6 +1,6 @@
 // Keeps the game playable without internet once installed.
 // The game page is fetched fresh when online (so updates arrive) and served from the cache when offline.
-const CACHE = 'mtc-v11';
+const CACHE = 'mtc-v12';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png'];
 
 self.addEventListener('install', e => {
@@ -27,7 +27,15 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match('index.html')));
     return;
   }
-  // fonts, the online-play library, icons: cache first, refresh in the background
+  // our own files (icons, manifest): network first so a new icon shows up, cache when offline
+  if (url.origin === self.location.origin) {
+    e.respondWith(fetch(req).then(res => {
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+      return res;
+    }).catch(() => caches.match(req, { ignoreSearch: true })));
+    return;
+  }
+  // fonts and the online-play library: cache first, refresh in the background
   e.respondWith(caches.match(req).then(hit => {
     const net = fetch(req).then(res => {
       if (res.ok || res.type === 'opaque') { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
