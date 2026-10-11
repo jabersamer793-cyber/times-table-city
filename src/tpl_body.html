@@ -55,6 +55,7 @@
         <button class="btn sm alt" id="rulesBtn" type="button">القواعد</button>
         <button class="btn sm alt" id="soundBtn" type="button" aria-pressed="true">الصوت: يعمل</button>
         <button class="btn sm alt" id="restartBtn" type="button">لعبة جديدة</button>
+        <button class="btn sm alt" id="portBtn" type="button">بالطول</button>
       </div>
     </div>
     <div class="rotatetip" id="rotateTip">
@@ -618,7 +619,8 @@ const pic=k=>CUT[k]||IMG[k];
    Upright screens get a tall board, 4 stations per row; wide screens get a wide board, 5 per row, so it fills the width. */
 let WIDE=false,BH=116;
 function pickLayout(){
-  const w=innerWidth>=640&&innerWidth>innerHeight*1.15;
+  const fl=document.documentElement.classList.contains('fl'),W=fl?innerHeight:innerWidth,H=fl?innerWidth:innerHeight;
+  const w=W>=640&&W>H*1.15;
   if(w===WIDE)return false;
   WIDE=w;BH=w?88:116;document.documentElement.style.setProperty('--bh',BH);return true;
 }
@@ -1250,10 +1252,43 @@ $('#soundBtn').onclick=()=>{S.sound=!S.sound;$('#soundBtn').setAttribute('aria-p
 // landscape on phones: go full screen and turn sideways where the browser allows it (Android); otherwise ask to rotate
 $('#landBtn').onclick=async()=>{
   let locked=false;
-  try{const el=document.documentElement;if(!document.fullscreenElement&&el.requestFullscreen)await el.requestFullscreen({navigationUI:'hide'});}catch(e){}
-  try{if(screen.orientation&&screen.orientation.lock){await screen.orientation.lock('landscape');locked=true;}}catch(e){}
-  if(!locked)showFeed('أدر الهاتف بالعرض، وتأكد أن قفل تدوير الشاشة متوقف','turn');
+  const upTo=p=>Promise.race([p,new Promise((_,no)=>setTimeout(()=>no(0),1200))]);
+  try{const el=document.documentElement;if(!document.fullscreenElement&&el.requestFullscreen)await upTo(el.requestFullscreen({navigationUI:'hide'}));}catch(e){}
+  try{if(screen.orientation&&screen.orientation.lock){await upTo(screen.orientation.lock('landscape'));locked=true;}}catch(e){}
+  // the browser can't turn the screen (iPhone, or rotation lock on): draw the game sideways instead
+  if(locked)await new Promise(r=>setTimeout(r,500));
+  if(innerWidth>innerHeight)return;
+  wantLand=true;try{localStorage.setItem('mtc-land','1');}catch(e){}
+  applyLand();
 };
+let wantLand=false;try{wantLand=localStorage.getItem('mtc-land')==='1';}catch(e){}
+let flReady=false;
+// copy the phone-landscape CSS rules under html.fl, swapping screen height and width units
+function prepFl(){
+  if(flReady)return;flReady=true;
+  for(const sh of document.styleSheets){let rules;try{rules=sh.cssRules;}catch(e){continue;}
+    for(const r of [...rules]){
+      const mq=r instanceof CSSMediaRule?(r.conditionText||r.media.mediaText):'';
+      if(!/landscape/.test(mq)||!/max-height/.test(mq))continue;
+      for(const c of r.cssRules){if(!c.selectorText)continue;
+        const sel=c.selectorText.split(',').map(s=>s.trim()==='body'?'html.fl body':'html.fl '+s.trim()).join(',');
+        const decl=c.style.cssText.replace(/100(d?)vh/g,'100$1vw');
+        try{sh.insertRule(sel+'{'+decl+'}',sh.cssRules.length);}catch(e){}
+      }
+    }
+  }
+}
+function applyLand(){
+  const on=wantLand&&!$('#game').hidden&&innerHeight>innerWidth&&innerWidth<=600;
+  if(on)prepFl();
+  if(document.documentElement.classList.contains('fl')===on)return;
+  document.documentElement.classList.toggle('fl',on);
+  if(pickLayout()&&S.players.length&&!$('#game').hidden){buildBoard();renderAll();}
+}
+$('#portBtn').onclick=()=>{wantLand=false;try{localStorage.removeItem('mtc-land');}catch(e){}applyLand();};
+window.addEventListener('resize',()=>setTimeout(applyLand,50));
+new MutationObserver(applyLand).observe($('#game'),{attributes:true,attributeFilter:['hidden']});
+applyLand();
 $('#rotClose').onclick=()=>{$('#rotateTip').classList.add('off');};
 let rt=0;
 $('#restartBtn').onclick=()=>{

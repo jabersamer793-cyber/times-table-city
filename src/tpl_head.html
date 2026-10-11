@@ -330,6 +330,13 @@ img{max-width:100%}
   .rtx{border:0;background:none;font-size:1.4rem;font-weight:800;line-height:1;padding:0 4px}
 }
 @keyframes tilt{50%{transform:rotate(-90deg)}}
+/* sideways without the phone turning (iPhone, rotation lock): the page itself is drawn turned a quarter, landscape rules are copied under html.fl by JS */
+#portBtn{display:none}
+html.fl{overflow:hidden;height:100%}
+html.fl body{position:fixed;top:0;left:0;margin:0;width:100vh;height:100vw;width:100dvh;height:100dvw;min-height:0;transform-origin:top left;transform:rotate(90deg) translateY(-100%);overflow:hidden;box-sizing:border-box}
+html.fl .wrap{height:100%;overflow:auto;-webkit-overflow-scrolling:touch}
+html.fl .rotatetip{display:none!important}
+html.fl #portBtn{display:inline-block}
 /* phone held sideways: board fills the height, players beside it, question beside the keypad */
 @media (orientation:landscape) and (max-height:560px){
   body{padding-block:6px 8px;padding-inline:max(10px,env(safe-area-inset-left,0px)) max(10px,env(safe-area-inset-right,0px))}
