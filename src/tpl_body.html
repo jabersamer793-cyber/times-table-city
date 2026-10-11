@@ -215,7 +215,7 @@ const CITY_SOUND={
 };
 /* real recordings (CC0, bigsoundbank.com), cut to a few seconds; decoded once and played through a limiter.
    The made-up sounds above stay as a fallback if a recording cannot be decoded. */
-const SND_GAIN={snd2:1.2,snd3:2,snd4:1.5,snd5:1.4,snd6:.5,snd7:.8,snd8:.5,snd9:2,sndCar:.45};
+const SND_GAIN={snd2:.7,snd3:.85,snd4:1,snd5:1.4,snd6:.5,snd7:.8,snd8:.5,snd9:2,sndCar:.45,sndWork:1.2};
 const SNDBUF={};let LIMIT=null;
 function sndOut(a){
   if(!LIMIT){LIMIT=a.createDynamicsCompressor();LIMIT.threshold.value=-12;LIMIT.knee.value=6;LIMIT.ratio.value=8;LIMIT.attack.value=.003;LIMIT.release.value=.2;LIMIT.connect(a.destination);}
@@ -654,6 +654,7 @@ async function movePawn(p,to){
   // the city's own sound plays when the car arrives there (not at the workshop on the way)
   const nd=NODES[p.pos];
   if(steps>0&&nd.t==='city')citySound(nd.n);
+  else if(steps>0&&nd.t==='work')playSnd('sndWork');
 }
 
 /* ---------- players panel ---------- */
