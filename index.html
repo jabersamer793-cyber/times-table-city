@@ -432,6 +432,7 @@ html.fl #portBtn{display:inline-block}
       <div class="row-c">
         <button class="btn" id="startBtn" type="button">ابدأ الرحلة</button>
         <button class="btn alt" id="rulesBtn0" type="button">كيف تُلعب؟</button>
+        <button class="btn alt musBtn" type="button" aria-pressed="true">الموسيقى: تعمل</button>
       </div>
       <div class="row-c" id="installRow" hidden>
         <button class="btn green" id="installBtn" type="button">ثبّت اللعبة على جهازك</button>
@@ -446,6 +447,7 @@ html.fl #portBtn{display:inline-block}
         <span class="olbadge" id="olBadge" hidden></span>
         <button class="btn sm alt" id="rulesBtn" type="button">القواعد</button>
         <button class="btn sm alt" id="soundBtn" type="button" aria-pressed="true">الصوت: يعمل</button>
+        <button class="btn sm alt musBtn" type="button" aria-pressed="true">الموسيقى: تعمل</button>
         <button class="btn sm alt" id="restartBtn" type="button">لعبة جديدة</button>
         <button class="btn sm alt" id="portBtn" type="button">بالطول</button>
       </div>
@@ -641,9 +643,46 @@ async function playSnd(k,dur){
     g.gain.setValueAtTime(v,st+Math.max(0,dur-.35));g.gain.linearRampToValueAtTime(.0001,st+dur);
   }
   s.connect(g);g.connect(sndOut(a));s.start(st);if(dur)s.stop(st+dur+.05);
+  musDuck((dur||buf.duration)+.3);
   return true;
 }
-function citySound(n){playSnd('snd'+n).then(ok=>{if(!ok){try{if(CITY_SOUND[n])CITY_SOUND[n]();}catch(e){}}});}
+function citySound(n){playSnd('snd'+n).then(ok=>{if(!ok){musDuck(2.5);try{if(CITY_SOUND[n])CITY_SOUND[n]();}catch(e){}}});}
+
+/* ---------- background music: a light marimba tune made with Web Audio, looped and kept quiet under the game sounds.
+   Browsers only allow sound after the first tap, so it starts on the first touch, click or key press. ---------- */
+const MUS={on:true,bus:null,timer:0,next:0,step:0,duckTo:0};
+try{MUS.on=localStorage.getItem('mtc-music')!=='0';}catch(e){}
+const MUS_VOL=.055,MUS_BPM=104;
+// C – G – Am – F, two bars each; chord roots for the bass and a pentatonic tune over them (0 = rest)
+const MUS_ROOT=[48,48,43,43,45,45,41,41];
+const MUS_TUNE=[
+  [72,0,76,79,76,0,74,72],[74,0,72,69,72,0,0,0],[71,0,74,79,74,0,71,74],[72,0,0,74,71,0,67,0],
+  [72,0,76,72,69,0,72,76],[79,0,76,74,72,0,0,0],[69,0,72,77,76,0,74,72],[74,0,72,0,72,0,0,0]];
+const midi=n=>440*Math.pow(2,(n-69)/12);
+function musNote(a,f,t,dur,vol,type){const o=a.createOscillator(),o2=a.createOscillator(),g=a.createGain();
+  o.type=type||'sine';o.frequency.value=f;o2.type='sine';o2.frequency.value=f*4;
+  const g2=a.createGain();g2.gain.value=.12;o2.connect(g2);g2.connect(g);o.connect(g);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  g.connect(MUS.bus);o.start(t);o2.start(t);o.stop(t+dur+.05);o2.stop(t+dur+.05);}
+function musShaker(a,t,vol){const n=Math.floor(a.sampleRate*.05),b=a.createBuffer(1,n,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
+  const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();s.buffer=b;f.type='highpass';f.frequency.value=6000;g.gain.value=vol;s.connect(f);f.connect(g);g.connect(MUS.bus);s.start(t);}
+function musTick(){const a=AC;if(!a||!MUS.bus)return;const e=60/MUS_BPM/2;
+  while(MUS.next<a.currentTime+.35){const t=MUS.next,bar=Math.floor(MUS.step/8)%8,i=MUS.step%8;
+    const n=MUS_TUNE[bar][i];if(n)musNote(a,midi(n),t,.5,.5,'triangle');
+    if(i===0||i===4)musNote(a,midi(MUS_ROOT[bar]),t,.6,.55,'triangle');
+    if(i===2||i===6){musNote(a,midi(MUS_ROOT[bar]+12),t,.25,.18,'sine');musNote(a,midi(MUS_ROOT[bar]+16+(bar>=4&&bar<6?-1:0)),t,.25,.14,'sine');}
+    if(i%2===1)musShaker(a,t,.12);
+    MUS.next+=e;MUS.step++;}}
+function musStart(){if(!MUS.on||!S.sound||MUS.timer)return;const a=actx();if(!a)return;
+  if(!MUS.bus){MUS.bus=a.createGain();MUS.bus.gain.value=0;MUS.bus.connect(a.destination);}
+  MUS.bus.gain.cancelScheduledValues(a.currentTime);MUS.bus.gain.setValueAtTime(MUS.bus.gain.value,a.currentTime);MUS.bus.gain.linearRampToValueAtTime(MUS_VOL,a.currentTime+1.5);
+  MUS.next=a.currentTime+.1;MUS.timer=setInterval(musTick,90);musTick();}
+function musStop(){clearInterval(MUS.timer);MUS.timer=0;if(AC&&MUS.bus){const t=AC.currentTime;MUS.bus.gain.cancelScheduledValues(t);MUS.bus.gain.setValueAtTime(MUS.bus.gain.value,t);MUS.bus.gain.linearRampToValueAtTime(0,t+.4);}}
+// the music steps back while a city, workshop, car or win sound plays
+function musDuck(sec){if(!AC||!MUS.bus||!MUS.timer)return;const t=AC.currentTime,g=MUS.bus.gain;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(MUS_VOL*.25,t+.2);g.setValueAtTime(MUS_VOL*.25,t+sec);g.linearRampToValueAtTime(MUS_VOL,t+sec+1.2);}
+// pause with the page hidden (phone locked, other tab), resume when it comes back
+document.addEventListener('visibilitychange',()=>{if(document.hidden)musStop();else if(MUS.on&&S.sound&&AC)musStart();});
+['pointerdown','keydown','touchend'].forEach(ev=>addEventListener(ev,()=>musStart(),{passive:true}));
 
 /* ---------- card generation ---------- */
 // button cards (multiple choice, true/false): no keypad; data-ok marks the right button
@@ -1439,6 +1478,7 @@ async function onDraw(){
   const flipped=await showBack(nd.n);
   const r=await showCard(card,flipped);
   if(r.ok){p.stars+=card.stars;p.total+=card.stars;renderPlayers();}
+  if(S.robot&&p.idx===0){const st=S.pStat=S.pStat||{1:[0,0],2:[0,0],3:[0,0]};st[card.stars][0]++;if(r.ok)st[card.stars][1]++;}
   sync({t:r.ok?`${p.name} أجاب إجابة صحيحة وحصل على ${card.stars===1?'نجمة':card.stars===2?'نجمتين':'3 نجوم'}`:`${p.name} لم يُصب هذه المرة`,k:r.ok?'ok':'bad'});
   if(r.ok)await sleep(450);
   if(p.stars>=5)await unlockAndMove(p);
@@ -1446,7 +1486,19 @@ async function onDraw(){
 }
 /* the robot plays its own turn: draws a card, "thinks", and is right more often on easy cards */
 const isBot=p=>S.robot&&p.idx===1;
+/* the robot matches the player: it is right about as often as the player is on cards of the same kind,
+   and it eases off when it is ahead and pushes harder when it falls behind, so the race stays close */
 const ROBOT_HIT={1:.85,2:.7,3:.55};
+function robotChance(stars){
+  const st=(S.pStat||{})[stars]||[0,0],all=Object.values(S.pStat||{}).reduce((a,[n,k])=>[a[0]+n,a[1]+k],[0,0]);
+  // the player's rate on this kind of card, filled in from their overall rate and the usual rate while there are few answers
+  const prior=all[0]?(all[1]+2*ROBOT_HIT[stars])/(all[0]+2):ROBOT_HIT[stars];
+  let ch=(st[1]+3*prior)/(st[0]+3);
+  // progress = cities passed and stars in hand; compare robot with player
+  const prog=q=>q.pos*6+q.stars,lead=prog(S.players[1])-prog(S.players[0]);
+  ch-=Math.max(-.25,Math.min(.25,lead*.04));
+  return Math.max(.3,Math.min(.95,ch));
+}
 async function robotTurn(){
   if(!S.robot||S.over||S.turn!==1)return;
   S.busy=true;renderDeck();
@@ -1457,7 +1509,7 @@ async function robotTurn(){
   const card=nextCard(nd.n);
   showFeed(`الروبوت يحل بطاقة «${card.title}» (${card.stars===1?'نجمة':card.stars===2?'نجمتان':'3 نجوم'})… يفكّر`,'card');
   await sleep(1900);
-  const ok=Math.random()<ROBOT_HIT[card.stars];
+  const ok=Math.random()<robotChance(card.stars);
   ok?sfx.ok():sfx.bad();
   if(ok){p.stars+=card.stars;p.total+=card.stars;}
   renderPlayers();
@@ -1557,7 +1609,7 @@ async function startGame(){
   leaveOnline();
   CHOICE=applyColors(CHOICE);
   S.players=[0,1].map(i=>({idx:i,name:S.names[i],car:CHOICE[i],pos:0,stars:0,total:0,keys:[],hd:null}));
-  S.turn=0;S.decks={};S.mdeck=[];S.endAfter=null;S.over=false;S.busy=true;
+  S.turn=0;S.pStat=null;S.decks={};S.mdeck=[];S.endAfter=null;S.over=false;S.busy=true;
   $('#setup').hidden=true;$('#game').hidden=false;window.scrollTo(0,0);
   await CUTP;
   // both cars wait at the start; each player takes the first city's key on their first turn
@@ -1648,7 +1700,10 @@ $('#startBtn').onclick=()=>{
   saveNames();
   startGame();
 };
-$('#soundBtn').onclick=()=>{S.sound=!S.sound;$('#soundBtn').setAttribute('aria-pressed',String(S.sound));$('#soundBtn').textContent=S.sound?'الصوت: يعمل':'الصوت: متوقف';};
+$('#soundBtn').onclick=()=>{S.sound=!S.sound;$('#soundBtn').setAttribute('aria-pressed',String(S.sound));$('#soundBtn').textContent=S.sound?'الصوت: يعمل':'الصوت: متوقف';S.sound?musStart():musStop();};
+const musLabel=()=>$$('.musBtn').forEach(b=>{b.setAttribute('aria-pressed',String(MUS.on));b.textContent=MUS.on?'الموسيقى: تعمل':'الموسيقى: متوقفة';});
+$$('.musBtn').forEach(b=>b.onclick=()=>{MUS.on=!MUS.on;try{localStorage.setItem('mtc-music',MUS.on?'1':'0');}catch(e){}musLabel();MUS.on?musStart():musStop();});
+musLabel();
 // landscape on phones: go full screen and turn sideways where the browser allows it (Android); otherwise ask to rotate
 $('#landBtn').onclick=async()=>{
   let locked=false;
