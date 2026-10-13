@@ -516,14 +516,15 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 
 /* ---------- data ---------- */
 const CITIES={
-  2:{name:'حديقة الألعاب',img:'park',key:'kPlay',c:'#3DB24A'},
-  3:{name:'مطعم البيتزا',img:'pizza',key:'kPizza',c:'#F2603F'},
-  4:{name:'المقهى',img:'coffee',key:'kCoffee',c:'#8A5A3B'},
-  5:{name:'المدرسة',img:'school',key:'kBus',c:'#2E86F0'},
-  6:{name:'المستشفى',img:'hospital',key:'kAmb',c:'#1FA8A0'},
-  7:{name:'محطة الإطفاء',img:'fire',key:'kFire',c:'#E5483B'},
-  8:{name:'مركز الشرطة',img:'police',key:'kPolice',c:'#3A4FA8'},
-  9:{name:'البنك',img:'bank',key:'kMoney',c:'#C48A00'}
+  // same order as the paper game; snd = that place's own sound (recordings snd2..snd9 are named after the old order)
+  2:{name:'البنك',img:'bank',key:'kMoney',c:'#C48A00',snd:9},
+  3:{name:'المقهى',img:'coffee',key:'kCoffee',c:'#8A5A3B',snd:4},
+  4:{name:'المدرسة',img:'school',key:'kBus',c:'#2E86F0',snd:5},
+  5:{name:'المستشفى',img:'hospital',key:'kAmb',c:'#1FA8A0',snd:6},
+  6:{name:'حديقة الألعاب',img:'park',key:'kPlay',c:'#3DB24A',snd:2},
+  7:{name:'محطة الإطفاء',img:'fire',key:'kFire',c:'#E5483B',snd:7},
+  8:{name:'مطعم البيتزا',img:'pizza',key:'kPizza',c:'#F2603F',snd:3},
+  9:{name:'مركز الشرطة',img:'police',key:'kPolice',c:'#3A4FA8',snd:8}
 };
 const NODES=[{t:'start'},{t:'city',n:2},{t:'city',n:3},{t:'work'},{t:'city',n:4},{t:'city',n:5},{t:'city',n:6},{t:'work'},{t:'city',n:7},{t:'city',n:8},{t:'work'},{t:'city',n:9},{t:'castle'}];
 const TYPES={
@@ -646,7 +647,7 @@ async function playSnd(k,dur){
   musDuck((dur||buf.duration)+.3);
   return true;
 }
-function citySound(n){playSnd('snd'+n).then(ok=>{if(!ok){musDuck(2.5);try{if(CITY_SOUND[n])CITY_SOUND[n]();}catch(e){}}});}
+function citySound(n){const s=(CITIES[n]&&CITIES[n].snd)||n;playSnd('snd'+s).then(ok=>{if(!ok){musDuck(2.5);try{if(CITY_SOUND[s])CITY_SOUND[s]();}catch(e){}}});}
 
 /* ---------- background music: a light marimba tune made with Web Audio, looped and kept quiet under the game sounds.
    Browsers only allow sound after the first tap, so it starts on the first touch, click or key press. ---------- */
@@ -1626,7 +1627,7 @@ $('#rulesBody').innerHTML=[
 ['اللعب أونلاين','ينشئ أحد اللاعبين لعبة فيظهر له رمز من 4 أرقام، ويكتبه الآخر في «انضم». أو يرسل له رابط الدعوة فيدخل مباشرة. يرى كل لاعب حركة سيارة صديقه ونتائجه مباشرة، وإذا أُغلقت الصفحة يرجع اللاعب بزر «العودة إلى لعبتي».'],
 ['مسار اللعبة','تسير السيارتان على الشارع عبر 8 مدن تمثل جداول الضرب من 2 إلى 9، وفي نهاية الطريق توجد قلعة أبطال الضرب.'],
 ['بطاقات المدن','في كل مدينة 15 بطاقة سؤال. للبطاقات ثلاثة مستويات: نجمة واحدة (سهلة)، نجمتان (متوسطة)، ثلاث نجوم (صعبة). وتتنوع التحديات بين: تحدي السرعة، لغز، أكمل الجدول، أكمل الفراغ.'],
-['نظام النجوم','عند الإجابة الصحيحة يحصل اللاعب على النجوم الموجودة على البطاقة. لا تدخل السيارة مدينة إلا بمفتاحها: في أول دور يأخذ كل لاعب مفتاح حديقة الألعاب ويدخلها. وفي كل مدينة، 5 نجوم تعطي مفتاح المدينة التالية فتنطلق السيارة إليها، ويبدأ عدّ النجوم من جديد. وفي آخر مدينة تفتح 5 نجوم بوابة القلعة.'],
+['نظام النجوم','عند الإجابة الصحيحة يحصل اللاعب على النجوم الموجودة على البطاقة. لا تدخل السيارة مدينة إلا بمفتاحها: في أول دور يأخذ كل لاعب مفتاح البنك ويدخله. وفي كل مدينة، 5 نجوم تعطي مفتاح المدينة التالية فتنطلق السيارة إليها، ويبدأ عدّ النجوم من جديد. وفي آخر مدينة تفتح 5 نجوم بوابة القلعة.'],
 ['نظام الأدوار','كل دور بطاقة واحدة فقط. بعد الإجابة ينتهي الدور وينتقل اللعب إلى اللاعب الآخر، حتى لو كانت البطاقة سهلة.'],
 ['ورشة الصيانة','توجد 3 محطات ورشة صيانة على الطريق. عند وصول السيارة إليها يسحب اللاعب بطاقة من صندوق يحتوي على 12 تحدياً مختلفاً، ولا يتكرر التحدي حتى تُستعمل كلها. إذا نجح يحصل على نجمة إضافية تُحسب له في المدينة التالية.'],
 ['الساعة الرملية','تُستخدم مع تحديات السرعة (وتحديات الصيانة المؤقتة) لتحديد الوقت المسموح للإجابة.'],
