@@ -630,6 +630,8 @@ function cutout(key){
       const sc=Math.min(1,420/Math.max(im.width,im.height)),w=Math.round(im.width*sc),h=Math.round(im.height*sc);
       const cv=document.createElement('canvas');cv.width=w;cv.height=h;const cx=cv.getContext('2d');cx.drawImage(im,0,0,w,h);
       const d=cx.getImageData(0,0,w,h),p=d.data,N=w*h,seen=new Uint8Array(N),from=new Int32Array(N),st=[];
+      // already cut out (transparent corners): use as is
+      if(p[3]<24&&p[(w-1)*4+3]<24){CUT[key]=IMG[key];return res();}
       const seed=i=>{from[i]=i;st.push(i);};
       // white paper background: only strip near-pure white so light walls survive
       let wb=0;for(const i of [0,w-1,N-w,N-1])if(p[i*4]+p[i*4+1]+p[i*4+2]>735)wb++;const white=wb>=2;
