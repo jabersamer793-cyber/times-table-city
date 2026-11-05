@@ -59,6 +59,7 @@
         <button class="btn sm alt" id="rulesBtn" type="button">القواعد</button>
         <button class="btn sm alt" id="soundBtn" type="button" aria-pressed="true">الصوت: يعمل</button>
         <button class="btn sm alt musBtn" type="button" aria-pressed="true">الموسيقى: تعمل</button>
+        <button class="btn sm alt" id="viewBtn" type="button" hidden>العرض: 2.5D</button>
         <button class="btn sm alt" id="restartBtn" type="button">لعبة جديدة</button>
         <button class="btn sm alt" id="portBtn" type="button">بالطول</button>
       </div>
@@ -113,6 +114,9 @@
 
 <script>
 /*ASSETS*/
+</script>
+<script>
+/*BOARD3D*/
 </script>
 <script>
 (function(){
@@ -742,9 +746,30 @@ const carSide=(c,d)=>`<svg viewBox="0 0 120 70" aria-hidden="true">
 <rect x="104" y="33" width="9" height="6" rx="2" fill="#FFE070" stroke="#16296B" stroke-width="2"/>
 <circle cx="32" cy="54" r="11" fill="#2B3354" stroke="#16296B" stroke-width="3"/><circle cx="32" cy="54" r="4.5" fill="#E6E9F5"/>
 <circle cx="90" cy="54" r="11" fill="#2B3354" stroke="#16296B" stroke-width="3"/><circle cx="90" cy="54" r="4.5" fill="#E6E9F5"/></svg>`;
+/* 2.5D board (React + three.js, see board3d/): the same road and stations drawn as a little 3D city.
+   The flat board below stays as the fallback, and the "العرض" button switches between the two. */
+const HAS3D=!!(window.Board3D&&Board3D.supported());
+let VIEW3D=HAS3D;try{if(localStorage.getItem('mtc-view')==='flat')VIEW3D=false;}catch(e){}
+let B3=null;
+const b3State=()=>({players:S.players.map((p,i)=>({pos:p.pos,color:PC[i],dark:PCD[i],keys:p.keys.slice(),name:p.name})),turn:S.turn,over:S.over});
+const b3Reserve=()=>WIDE?{}:{bottom:.2};
+function dropB3(){if(B3){try{B3.destroy();}catch(e){}B3=null;}}
+function buildBoard3D(){
+  const b=$('#board');
+  b.classList.toggle('wide',WIDE);b.classList.add('b3d');b.style.aspectRatio=`100 / ${BH}`;
+  if(B3&&$('#b3dView')){B3.update({reserve:b3Reserve(),wide:WIDE});renderNodes();return;}
+  dropB3();clearInterval(tlT);
+  b.innerHTML=`<div class="b3d-view" id="b3dView"></div><div class="deckbox"><button class="deck" id="drawBtn" type="button"></button></div>`;
+  $('#drawBtn').onclick=onDraw;
+  try{B3=Board3D.mount($('#b3dView'),{nodes:NODES,cities:CITIES,pic,reserve:b3Reserve(),wide:WIDE});}
+  catch(e){B3=null;VIEW3D=false;return buildBoard();}
+  renderNodes();
+}
 function buildBoard(){
   pickLayout();
-  const b=$('#board');b.classList.toggle('wide',WIDE);b.style.aspectRatio=`100 / ${BH}`;
+  if(VIEW3D)return buildBoard3D();
+  dropB3();
+  const b=$('#board');b.classList.remove('b3d');b.classList.toggle('wide',WIDE);b.style.aspectRatio=`100 / ${BH}`;
   const pts=NODES.map((_,i)=>{const p=npos(i);return p.x+','+p.y}).join(' ');
   const pl=(st,w,extra)=>`<polyline points="${pts}" fill="none" stroke="${st}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${extra||''}/>`;
   // zebra crossings on the straight stretch just before each city
@@ -762,6 +787,7 @@ function buildBoard(){
 }
 const CHECK='<svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function renderNodes(){
+  if(B3){B3.update(b3State());return;}
   const el=$('#nodes');if(!el)return;
   el.innerHTML=NODES.map((nd,i)=>{
     const p=npos(i);let img='',alt='',tag='',plc='',extra='';
@@ -775,6 +801,7 @@ function renderNodes(){
   }).join('');
 }
 function placeCars(){
+  if(B3){B3.update(b3State());return;}
   S.players.forEach((p,i)=>{
     const el=$('#car'+i);if(!el)return;
     const pt=npos(p.pos),h=p.hd!=null?p.hd:heading(p.pos);
@@ -1314,6 +1341,10 @@ $('#startBtn').onclick=()=>{
   saveNames();
   startGame();
 };
+// switch between the 2.5D city and the flat board
+function showViewBtn(){const v=$('#viewBtn');v.hidden=!HAS3D;v.textContent=VIEW3D?'العرض: 2.5D':'العرض: مسطّح';}
+showViewBtn();
+$('#viewBtn').onclick=()=>{VIEW3D=!VIEW3D;try{localStorage.setItem('mtc-view',VIEW3D?'3d':'flat');}catch(e){}showViewBtn();if(S.players.length){buildBoard();renderAll();}};
 $('#soundBtn').onclick=()=>{S.sound=!S.sound;$('#soundBtn').setAttribute('aria-pressed',String(S.sound));$('#soundBtn').textContent=S.sound?'الصوت: يعمل':'الصوت: متوقف';S.sound?musStart():musStop();};
 const musLabel=()=>$$('.musBtn').forEach(b=>{b.setAttribute('aria-pressed',String(MUS.on));b.textContent=MUS.on?'الموسيقى: تعمل':'الموسيقى: متوقفة';});
 $$('.musBtn').forEach(b=>b.onclick=()=>{MUS.on=!MUS.on;try{localStorage.setItem('mtc-music',MUS.on?'1':'0');}catch(e){}musLabel();MUS.on?musStart():musStop();});
